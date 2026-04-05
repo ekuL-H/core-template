@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { isLoggedIn, logout } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
+import AppShell from '@/components/layout/AppShell'
 
 export default function DashboardPage() {
   const [checking, setChecking] = useState(true)
@@ -18,14 +19,14 @@ export default function DashboardPage() {
   if (checking) return null
 
   return (
-    <div className="min-h-screen bg-background p-8">
+    <AppShell>
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <Button variant="outline" onClick={logout}>
           Logout
         </Button>
       </div>
-      <p className="text-muted-foreground">Welcome to your dashboard. More coming soon.</p>
-    </div>
+      <p className="text-muted-foreground">Welcome to your dashboard.</p>
+    </AppShell>
   )
 }
