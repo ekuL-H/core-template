@@ -22,6 +22,9 @@ app.use('/api/auth', authRoutes)
 import watchlistRoutes from './routes/watchlist'
 app.use('/api/watchlist', watchlistRoutes)
 
+import marketRoutes from './routes/market'
+app.use('/api/market', marketRoutes)
+
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`)
 })

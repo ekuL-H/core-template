@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import { Watchlist, Symbol } from '@/lib/types'
 import AppShell from '@/components/layout/AppShell'
 import { Search, ArrowUpDown, Plus, X, ChevronDown } from 'lucide-react'
+import CandlestickChart from '@/components/charts/CandlestickChart'
 
 type Tab = 'symbols' | 'automation' | 'analytics' | 'activity' | 'settings'
 
@@ -243,21 +244,11 @@ export default function WatchlistDetailPage() {
 
             {/* Chart panel */}
             {chartSymbol && (
-              <div className="w-1/2 border-l border-black/10 dark:border-white/10 min-h-[300px]">
-                <div className="flex items-center justify-between px-3 h-[25px] border-b border-black/10 dark:border-white/10">
-                  <span className="text-xs font-medium text-zinc-900 dark:text-white">
-                    {watchlist.items.find((i) => i.symbolId === chartSymbol)?.symbol.name}
-                  </span>
-                  <button
-                    onClick={() => setChartSymbol(null)}
-                    className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10"
-                  >
-                    <X className="w-3 h-3 text-zinc-500" />
-                  </button>
-                </div>
-                <div className="flex items-center justify-center h-64 text-xs text-zinc-400">
-                  Chart placeholder — will integrate with your Charts module
-                </div>
+              <div className="w-1/2 border-l border-black/10 dark:border-white/10 h-[400px]">
+                <CandlestickChart
+                  symbol={watchlist.items.find((i) => i.symbolId === chartSymbol)?.symbol.name || ''}
+                  color={watchlist.color}
+                />
               </div>
             )}
           </div>

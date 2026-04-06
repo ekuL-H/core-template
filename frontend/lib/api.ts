@@ -42,5 +42,13 @@ export const api = {
   removeSymbol: async (watchlistId: string, symbolId: string) => {
     const res = await axios.delete(`${BASE_URL}/api/watchlist/${watchlistId}/symbols/${symbolId}`, { headers: getHeaders() })
     return res.data
-  }
+  },
+
+  getCandles: async (symbol: string, interval: string = '30min', outputsize: number = 300) => {
+    const res = await axios.get(`${BASE_URL}/api/market/candles`, {
+      params: { symbol, interval, outputsize },
+      headers: getHeaders()
+    })
+    return res.data
+  },
 }
