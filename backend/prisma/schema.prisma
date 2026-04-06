@@ -86,6 +86,7 @@ model Watchlist {
   id        String   @id @default(uuid())
   userId    String
   name      String
+  color     String   @default("#6366f1")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

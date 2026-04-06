@@ -19,6 +19,9 @@ app.get('/health', (req, res) => {
 
 app.use('/api/auth', authRoutes)
 
+import watchlistRoutes from './routes/watchlist'
+app.use('/api/watchlist', watchlistRoutes)
+
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`)
 })
