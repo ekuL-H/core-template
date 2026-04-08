@@ -63,6 +63,7 @@ router.get('/candles', authenticate, async (req: AuthRequest, res: Response) => 
         symbol: symbolStr,
         interval: intervalStr,
         outputsize: size,
+        timezone: 'UTC',
         apikey: API_KEY
       }
     })
@@ -85,7 +86,7 @@ router.get('/candles', authenticate, async (req: AuthRequest, res: Response) => 
           symbolId_timeframe_timestamp: {
             symbolId: dbSymbol.id,
             timeframe: intervalStr,
-            timestamp: new Date(v.datetime)
+            timestamp: new Date(v.datetime + 'Z')
           }
         },
         update: {
@@ -98,7 +99,7 @@ router.get('/candles', authenticate, async (req: AuthRequest, res: Response) => 
         create: {
           symbolId: dbSymbol.id,
           timeframe: intervalStr,
-          timestamp: new Date(v.datetime),
+          timestamp: new Date(v.datetime + 'Z'),
           open: parseFloat(v.open),
           high: parseFloat(v.high),
           low: parseFloat(v.low),
@@ -114,7 +115,7 @@ router.get('/candles', authenticate, async (req: AuthRequest, res: Response) => 
     // Return formatted data
     const candles = values
       .map((v: any) => ({
-        time: Math.floor(new Date(v.datetime).getTime() / 1000),
+        time: Math.floor(new Date(v.datetime + 'Z').getTime() / 1000),
         open: parseFloat(v.open),
         high: parseFloat(v.high),
         low: parseFloat(v.low),

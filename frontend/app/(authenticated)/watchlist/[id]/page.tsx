@@ -246,7 +246,7 @@ export default function WatchlistDetailPage() {
 
             {/* Chart panel */}
             {chartSymbol && (
-              <div className="w-1/2 border-l border-black/10 dark:border-white/10 h-[400px]">
+              <div className="w-1/2 border-l border-black/10 dark:border-white/10 h-[calc(100vh-220px)]">
                 <CandlestickChart
                   symbol={watchlist.items.find((i) => i.symbolId === chartSymbol)?.symbol.name || ''}
                   color={watchlist.color}
