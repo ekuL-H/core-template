@@ -193,9 +193,9 @@ export default function WatchlistDetailPage() {
           </div>
 
           {/* Content area with optional chart panel */}
-          <div className="flex">
+          <div className="flex" style={{ height: 'calc(100vh - 250px)' }}>
             {/* Symbol table */}
-            <div className={`flex-1 ${chartSymbol ? 'w-1/2' : 'w-full'}`}>
+            <div className={`${chartSymbol ? 'w-1/2' : 'w-full'} h-full flex flex-col`}>
               {/* Column headers */}
               <div className="flex items-center h-[25px] border-b border-black/10 dark:border-white/10 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
                 <div className="flex-1 px-3">Symbol</div>
@@ -246,7 +246,7 @@ export default function WatchlistDetailPage() {
 
             {/* Chart panel */}
             {chartSymbol && (
-              <div className="w-1/2 border-l border-black/10 dark:border-white/10 h-[calc(100vh-220px)]">
+              <div className="w-1/2 border-l border-black/10 dark:border-white/10 h-full">
                 <CandlestickChart
                   symbol={watchlist.items.find((i) => i.symbolId === chartSymbol)?.symbol.name || ''}
                   color={watchlist.color}

@@ -4,7 +4,6 @@ import { useState } from 'react'
 import AuthProvider from '@/components/providers/AuthProvider'
 import Header from '@/components/layout/Header'
 import Sidebar from '@/components/layout/Sidebar'
-import Breadcrumb from '@/components/layout/Breadcrumb'
 
 export default function AuthenticatedLayout({
   children,
@@ -15,11 +14,11 @@ export default function AuthenticatedLayout({
 
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-black/10 dark:bg-zinc-950">
+      <div className="h-screen overflow-hidden bg-black/10 dark:bg-zinc-950">
         <Header sidebarExpanded={expanded} />
         <Sidebar expanded={expanded} onToggle={() => setExpanded(!expanded)} />
         <main
-          className={`transition-all duration-300 pt-[35px] ${
+          className={`transition-all duration-300 pt-[35px] h-full ${
             expanded ? 'ml-56' : 'ml-14'
           }`}
         >
