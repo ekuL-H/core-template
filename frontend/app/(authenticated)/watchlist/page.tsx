@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { isLoggedIn } from '@/lib/auth'
 import { api } from '@/lib/api'
 import { Watchlist } from '@/lib/types'
 import AppShell from '@/components/layout/AppShell'
@@ -23,7 +22,6 @@ const PRESET_COLORS = [
 
 export default function WatchlistPage() {
   const router = useRouter()
-  const [checking, setChecking] = useState(true)
   const [watchlists, setWatchlists] = useState<Watchlist[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -37,13 +35,8 @@ export default function WatchlistPage() {
   const [editName, setEditName] = useState('')
   const [editColor, setEditColor] = useState('')
 
-  useEffect(() => {
-    if (!isLoggedIn()) {
-      window.location.href = '/auth'
-    } else {
-      setChecking(false)
+  useEffect(() => { 
       fetchWatchlists()
-    }
   }, [])
 
   const fetchWatchlists = async () => {
@@ -96,7 +89,6 @@ export default function WatchlistPage() {
     setEditColor(wl.color)
   }
 
-  if (checking) return null
 
   return (
     <AppShell>

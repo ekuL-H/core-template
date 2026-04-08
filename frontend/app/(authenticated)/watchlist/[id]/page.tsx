@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { isLoggedIn } from '@/lib/auth'
 import { api } from '@/lib/api'
 import { Watchlist, Symbol } from '@/lib/types'
 import AppShell from '@/components/layout/AppShell'
-import { Search, ArrowUpDown, Plus, X, ChevronDown } from 'lucide-react'
+import { Search, ArrowUpDown, Plus, X } from 'lucide-react'
 import CandlestickChart from '@/components/charts/CandlestickChart'
 
 type Tab = 'symbols' | 'automation' | 'analytics' | 'activity' | 'settings'
@@ -24,7 +23,6 @@ export default function WatchlistDetailPage() {
   const router = useRouter()
   const watchlistId = params.id as string
 
-  const [checking, setChecking] = useState(true)
   const [watchlist, setWatchlist] = useState<Watchlist | null>(null)
   const [allSymbols, setAllSymbols] = useState<Symbol[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,12 +38,7 @@ export default function WatchlistDetailPage() {
   const [chartSymbol, setChartSymbol] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isLoggedIn()) {
-      window.location.href = '/auth'
-    } else {
-      setChecking(false)
-      fetchData()
-    }
+    fetchData()
   }, [])
 
   const fetchData = async () => {
@@ -89,7 +82,16 @@ export default function WatchlistDetailPage() {
     }
   }
 
-  if (checking || loading) return null
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="py-8 text-center text-xs text-zinc-500 dark:text-zinc-400">
+          Loading watchlist...
+        </div>
+      </AppShell>
+    )
+  }
+
   if (!watchlist) return null
 
   // Filter and sort items
