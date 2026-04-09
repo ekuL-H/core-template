@@ -85,4 +85,20 @@ export const api = {
     const res = await axios.get(`${BASE_URL}/api/broker/symbols/${source}`, { headers: getHeaders() })
     return res.data
   },
+
+  // Bridge (MT5 live data)
+  getBridgePrices: async () => {
+    const res = await axios.get(`${BASE_URL}/api/bridge/prices`, { headers: getHeaders() })
+    return res.data
+  },
+
+  getBridgePrice: async (symbol: string) => {
+    const res = await axios.get(`${BASE_URL}/api/bridge/price/${symbol}`, { headers: getHeaders() })
+    return res.data
+  },
+
+  getBridgeAccount: async () => {
+    const res = await axios.get(`${BASE_URL}/api/bridge/account`, { headers: getHeaders() })
+    return res.data
+  },
 }

@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { Watchlist, Symbol } from '@/lib/types'
 import AppShell from '@/components/layout/AppShell'
-import { Search, ArrowUpDown, Plus, X, RefreshCw } from 'lucide-react'
+import { Search, ArrowUpDown, Plus, X } from 'lucide-react'
 import CandlestickChart from '@/components/charts/CandlestickChart'
 
 type Tab = 'symbols' | 'automation' | 'analytics' | 'activity' | 'settings'
@@ -18,11 +18,17 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'settings', label: 'Settings' },
 ]
 
-interface QuoteData {
-  close: string
-  change: string
-  percent_change: string
-  is_market_open: boolean
+interface LivePrice {
+  bid: number
+  ask: number
+  digits: number
+  spread: number
+  timestamp: string
+}
+
+interface SymbolMapping {
+  symbolId: string
+  sourceSymbol: string
 }
 
 export default function WatchlistDetailPage() {
@@ -44,13 +50,14 @@ export default function WatchlistDetailPage() {
   // Chart panel
   const [chartSymbol, setChartSymbol] = useState<string | null>(null)
 
-  // Live quotes
-  const [quotes, setQuotes] = useState<Record<string, QuoteData>>({})
-  const quotesRef = useRef(quotes)
-  quotesRef.current = quotes
+  // Live prices from MT5
+  const [livePrices, setLivePrices] = useState<Record<string, LivePrice>>({})
+  const [symbolMappings, setSymbolMappings] = useState<Record<string, string>>({})
+  const [priceSource, setPriceSource] = useState<'mt5' | 'none'>('none')
 
   useEffect(() => {
     fetchData()
+    fetchMappings()
   }, [])
 
   const fetchData = async () => {
@@ -73,37 +80,50 @@ export default function WatchlistDetailPage() {
     }
   }
 
-  // Fetch quotes for all symbols in the watchlist
-  const fetchQuotes = useCallback(async (items: { symbol: { name: string } }[]) => {
-    if (items.length === 0) return
-
-    // Fetch one at a time to stay within rate limits
-    const newQuotes: Record<string, QuoteData> = { ...quotesRef.current }
-
-    for (const item of items) {
-      try {
-        const data = await api.getQuote(item.symbol.name)
-        newQuotes[item.symbol.name] = {
-          close: data.close,
-          change: data.change,
-          percent_change: data.percent_change,
-          is_market_open: data.is_market_open,
-        }
-      } catch (err) {
-        // Skip failed quotes silently
-      }
+  // Fetch symbol mappings (our name → broker name)
+  const fetchMappings = async () => {
+    try {
+      const data = await api.getBrokerSymbols('icmarkets-mt5')
+      const map: Record<string, string> = {}
+      data.forEach((m: any) => {
+        map[m.symbolId] = m.sourceSymbol
+      })
+      setSymbolMappings(map)
+    } catch (err) {
+      console.error('Failed to fetch symbol mappings', err)
     }
+  }
 
-    setQuotes(newQuotes)
+  // Fetch all MT5 live prices
+  const fetchLivePrices = useCallback(async () => {
+    try {
+      const data = await api.getBridgePrices()
+      if (data.prices && data.prices.length > 0) {
+        const priceMap: Record<string, LivePrice> = {}
+        data.prices.forEach((p: any) => {
+          priceMap[p.symbol] = {
+            bid: p.bid,
+            ask: p.ask,
+            digits: p.digits,
+            spread: p.spread,
+            timestamp: p.timestamp
+          }
+        })
+        setLivePrices(priceMap)
+        setPriceSource('mt5')
+      }
+    } catch (err) {
+      // MT5 not running or bridge not available
+      setPriceSource('none')
+    }
   }, [])
 
-  // Fetch quotes when watchlist loads
+  // Fetch prices on load and poll every 2 seconds
   useEffect(() => {
-    if (watchlist && watchlist.items.length > 0) {
-      fetchQuotes(watchlist.items)
-    }
-  }, [watchlist, fetchQuotes])
-
+    fetchLivePrices()
+    const timer = setInterval(fetchLivePrices, 2000)
+    return () => clearInterval(timer)
+  }, [fetchLivePrices])
 
   const handleAddSymbol = async (symbolId: string) => {
     try {
@@ -124,6 +144,13 @@ export default function WatchlistDetailPage() {
     } catch (err) {
       console.error('Failed to remove symbol', err)
     }
+  }
+
+  // Get MT5 price for a watchlist item
+  const getPriceForItem = (item: { symbolId: string; symbol: { name: string } }): LivePrice | null => {
+    const brokerSymbol = symbolMappings[item.symbolId]
+    if (!brokerSymbol) return null
+    return livePrices[brokerSymbol] || null
   }
 
   if (loading) {
@@ -162,22 +189,8 @@ export default function WatchlistDetailPage() {
     { label: watchlist.name },
   ]
 
-  const formatPrice = (price: string) => {
-    const num = parseFloat(price)
-    if (isNaN(num)) return '—'
-    // Auto-detect decimal places based on magnitude
-    if (num > 1000) return num.toFixed(2)
-    if (num > 10) return num.toFixed(4)
-    return num.toFixed(5)
-  }
-
-  const formatChange = (change: string, percent: string) => {
-    const pct = parseFloat(percent)
-    if (isNaN(pct)) return null
-    return {
-      text: `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`,
-      positive: pct >= 0,
-    }
+  const formatPrice = (price: number, digits: number) => {
+    return price.toFixed(digits)
   }
 
   return (
@@ -194,6 +207,13 @@ export default function WatchlistDetailPage() {
           </h1>
           <span className="text-xs text-zinc-500 dark:text-zinc-400">
             {watchlist.items.length} {watchlist.items.length === 1 ? 'symbol' : 'symbols'}
+          </span>
+        </div>
+        {/* Price source indicator */}
+        <div className="flex items-center gap-1.5">
+          <div className={`w-1.5 h-1.5 rounded-full ${priceSource === 'mt5' ? 'bg-green-500' : 'bg-zinc-400'}`} />
+          <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
+            {priceSource === 'mt5' ? 'MT5 Live' : 'No feed'}
           </span>
         </div>
       </div>
@@ -246,13 +266,6 @@ export default function WatchlistDetailPage() {
               {sortAsc ? 'A-Z' : 'Z-A'}
             </button>
             <button
-              onClick={() => watchlist && fetchQuotes(watchlist.items)}
-              className="flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-black/10 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-black/5 dark:hover:bg-white/5"
-            >
-              <RefreshCw className="w-3 h-3" />
-              Prices
-            </button>
-            <button
               onClick={() => setShowAddSymbol(true)}
               className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700"
             >
@@ -269,8 +282,9 @@ export default function WatchlistDetailPage() {
               <div className="flex items-center h-[25px] border-b border-black/10 dark:border-white/10 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide min-w-0">
                 <div className="flex-shrink-0 w-24 px-2">Symbol</div>
                 <div className="flex-shrink-0 w-16 px-2">Class</div>
-                <div className="flex-1 px-2 text-right min-w-0">Price</div>
-                <div className="flex-shrink-0 w-16 px-2 text-right">Chg%</div>
+                <div className="flex-1 px-2 text-right min-w-0">Bid</div>
+                <div className="flex-1 px-2 text-right min-w-0">Ask</div>
+                <div className="flex-shrink-0 w-16 px-2 text-right">Spread</div>
                 <div className="flex-shrink-0 w-8 px-1"></div>
               </div>
 
@@ -284,8 +298,7 @@ export default function WatchlistDetailPage() {
                   </div>
                 )}
                 {filteredItems.map((item) => {
-                  const quote = quotes[item.symbol.name]
-                  const change = quote ? formatChange(quote.change, quote.percent_change) : null
+                  const price = getPriceForItem(item)
 
                   return (
                     <div
@@ -304,16 +317,17 @@ export default function WatchlistDetailPage() {
                         {item.symbol.assetClass}
                       </div>
                       <div className="flex-1 px-2 text-right font-mono text-zinc-900 dark:text-white min-w-0">
-                        {quote ? formatPrice(quote.close) : (
+                        {price ? formatPrice(price.bid, price.digits) : (
                           <span className="text-zinc-400">···</span>
                         )}
                       </div>
-                      <div className="flex-shrink-0 w-16 px-2 text-right">
-                        {change ? (
-                          <span className={`font-mono ${change.positive ? 'text-green-500' : 'text-red-500'}`}>
-                            {change.text}
-                          </span>
-                        ) : (
+                      <div className="flex-1 px-2 text-right font-mono text-zinc-900 dark:text-white min-w-0">
+                        {price ? formatPrice(price.ask, price.digits) : (
+                          <span className="text-zinc-400">···</span>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0 w-16 px-2 text-right font-mono text-zinc-500 dark:text-zinc-400">
+                        {price ? formatPrice(price.spread, price.digits) : (
                           <span className="text-zinc-400">···</span>
                         )}
                       </div>
