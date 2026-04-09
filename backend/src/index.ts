@@ -32,4 +32,12 @@ app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`)
 })
 
+import bridgeRoutes from './routes/bridge'
+import { startMT5Watcher } from './bridge/mt5-watcher'
+
+app.use('/api/bridge', bridgeRoutes)
+
+// Start MT5 file watcher
+startMT5Watcher()
+
 export default app
