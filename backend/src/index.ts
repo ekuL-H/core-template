@@ -25,6 +25,9 @@ app.use('/api/watchlist', watchlistRoutes)
 import marketRoutes from './routes/market'
 app.use('/api/market', marketRoutes)
 
+import brokerRoutes from './routes/broker'
+app.use('/api/broker', brokerRoutes)
+
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`)
 })

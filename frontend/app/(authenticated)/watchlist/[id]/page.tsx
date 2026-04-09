@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { Watchlist, Symbol } from '@/lib/types'
 import AppShell from '@/components/layout/AppShell'
-import { Search, ArrowUpDown, Plus, X } from 'lucide-react'
+import { Search, ArrowUpDown, Plus, X, RefreshCw } from 'lucide-react'
 import CandlestickChart from '@/components/charts/CandlestickChart'
 
 type Tab = 'symbols' | 'automation' | 'analytics' | 'activity' | 'settings'
@@ -17,6 +17,13 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'activity', label: 'Activity' },
   { key: 'settings', label: 'Settings' },
 ]
+
+interface QuoteData {
+  close: string
+  change: string
+  percent_change: string
+  is_market_open: boolean
+}
 
 export default function WatchlistDetailPage() {
   const params = useParams()
@@ -36,6 +43,11 @@ export default function WatchlistDetailPage() {
 
   // Chart panel
   const [chartSymbol, setChartSymbol] = useState<string | null>(null)
+
+  // Live quotes
+  const [quotes, setQuotes] = useState<Record<string, QuoteData>>({})
+  const quotesRef = useRef(quotes)
+  quotesRef.current = quotes
 
   useEffect(() => {
     fetchData()
@@ -60,6 +72,38 @@ export default function WatchlistDetailPage() {
       setLoading(false)
     }
   }
+
+  // Fetch quotes for all symbols in the watchlist
+  const fetchQuotes = useCallback(async (items: { symbol: { name: string } }[]) => {
+    if (items.length === 0) return
+
+    // Fetch one at a time to stay within rate limits
+    const newQuotes: Record<string, QuoteData> = { ...quotesRef.current }
+
+    for (const item of items) {
+      try {
+        const data = await api.getQuote(item.symbol.name)
+        newQuotes[item.symbol.name] = {
+          close: data.close,
+          change: data.change,
+          percent_change: data.percent_change,
+          is_market_open: data.is_market_open,
+        }
+      } catch (err) {
+        // Skip failed quotes silently
+      }
+    }
+
+    setQuotes(newQuotes)
+  }, [])
+
+  // Fetch quotes when watchlist loads
+  useEffect(() => {
+    if (watchlist && watchlist.items.length > 0) {
+      fetchQuotes(watchlist.items)
+    }
+  }, [watchlist, fetchQuotes])
+
 
   const handleAddSymbol = async (symbolId: string) => {
     try {
@@ -117,6 +161,24 @@ export default function WatchlistDetailPage() {
     { label: 'Watchlists', href: '/watchlist' },
     { label: watchlist.name },
   ]
+
+  const formatPrice = (price: string) => {
+    const num = parseFloat(price)
+    if (isNaN(num)) return '—'
+    // Auto-detect decimal places based on magnitude
+    if (num > 1000) return num.toFixed(2)
+    if (num > 10) return num.toFixed(4)
+    return num.toFixed(5)
+  }
+
+  const formatChange = (change: string, percent: string) => {
+    const pct = parseFloat(percent)
+    if (isNaN(pct)) return null
+    return {
+      text: `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`,
+      positive: pct >= 0,
+    }
+  }
 
   return (
     <AppShell breadcrumbOverrides={breadcrumbs}>
@@ -184,6 +246,13 @@ export default function WatchlistDetailPage() {
               {sortAsc ? 'A-Z' : 'Z-A'}
             </button>
             <button
+              onClick={() => watchlist && fetchQuotes(watchlist.items)}
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-black/10 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-black/5 dark:hover:bg-white/5"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Prices
+            </button>
+            <button
               onClick={() => setShowAddSymbol(true)}
               className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700"
             >
@@ -197,14 +266,16 @@ export default function WatchlistDetailPage() {
             {/* Symbol table */}
             <div className={`${chartSymbol ? 'w-1/2' : 'w-full'} h-full flex flex-col`}>
               {/* Column headers */}
-              <div className="flex items-center h-[25px] border-b border-black/10 dark:border-white/10 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
-                <div className="flex-1 px-3">Symbol</div>
-                <div className="w-24 px-3">Class</div>
-                <div className="w-20 px-3 text-right">Actions</div>
+              <div className="flex items-center h-[25px] border-b border-black/10 dark:border-white/10 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide min-w-0">
+                <div className="flex-shrink-0 w-24 px-2">Symbol</div>
+                <div className="flex-shrink-0 w-16 px-2">Class</div>
+                <div className="flex-1 px-2 text-right min-w-0">Price</div>
+                <div className="flex-shrink-0 w-16 px-2 text-right">Chg%</div>
+                <div className="flex-shrink-0 w-8 px-1"></div>
               </div>
 
               {/* Symbol rows */}
-              <div className="overflow-y-auto overflow-x-auto">
+              <div className="overflow-y-auto overflow-x-auto flex-1">
                 {filteredItems.length === 0 && (
                   <div className="py-8 text-center text-xs text-zinc-500 dark:text-zinc-400">
                     {watchlist.items.length === 0
@@ -212,35 +283,54 @@ export default function WatchlistDetailPage() {
                       : 'No symbols match your filter'}
                   </div>
                 )}
-                {filteredItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`flex items-center h-[25px] border-b border-black/5 dark:border-white/5 text-xs hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors ${
-                      chartSymbol === item.symbolId ? 'bg-black/5 dark:bg-white/5' : ''
-                    }`}
-                    onClick={() =>
-                      setChartSymbol(chartSymbol === item.symbolId ? null : item.symbolId)
-                    }
-                  >
-                    <div className="flex-1 px-3 font-medium text-zinc-900 dark:text-white">
-                      {item.symbol.name}
+                {filteredItems.map((item) => {
+                  const quote = quotes[item.symbol.name]
+                  const change = quote ? formatChange(quote.change, quote.percent_change) : null
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`flex items-center h-[25px] border-b border-black/5 dark:border-white/5 text-xs hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors ${
+                        chartSymbol === item.symbolId ? 'bg-black/5 dark:bg-white/5' : ''
+                      }`}
+                      onClick={() =>
+                        setChartSymbol(chartSymbol === item.symbolId ? null : item.symbolId)
+                      }
+                    >
+                      <div className="flex-shrink-0 w-24 px-2 font-medium text-zinc-900 dark:text-white truncate">
+                        {item.symbol.name}
+                      </div>
+                      <div className="flex-shrink-0 w-16 px-2 text-zinc-500 dark:text-zinc-400 truncate">
+                        {item.symbol.assetClass}
+                      </div>
+                      <div className="flex-1 px-2 text-right font-mono text-zinc-900 dark:text-white min-w-0">
+                        {quote ? formatPrice(quote.close) : (
+                          <span className="text-zinc-400">···</span>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0 w-16 px-2 text-right">
+                        {change ? (
+                          <span className={`font-mono ${change.positive ? 'text-green-500' : 'text-red-500'}`}>
+                            {change.text}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-400">···</span>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0 w-8 px-1 text-right">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRemoveSymbol(item.symbolId)
+                          }}
+                          className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30"
+                        >
+                          <X className="w-3 h-3 text-red-500" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="w-24 px-3 text-zinc-500 dark:text-zinc-400">
-                      {item.symbol.assetClass}
-                    </div>
-                    <div className="w-20 px-3 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleRemoveSymbol(item.symbolId)
-                        }}
-                        className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30"
-                      >
-                        <X className="w-3 h-3 text-red-500" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
 

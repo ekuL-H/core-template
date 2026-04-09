@@ -24,3 +24,14 @@ export interface Watchlist {
   updatedAt: string
   items: WatchlistItem[]
 }
+
+export interface BrokerConnection {
+  id: string
+  userId: string
+  brokerName: string
+  accountNumber: string | null
+  status: string
+  config: any
+  createdAt: string
+  updatedAt: string
+}

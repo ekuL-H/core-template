@@ -51,4 +51,38 @@ export const api = {
     })
     return res.data
   },
+
+  getQuote: async (symbol: string) => {
+    const res = await axios.get(`${BASE_URL}/api/market/quote`, {
+      params: { symbol },
+      headers: getHeaders()
+    })
+    return res.data
+  },
+
+  // Broker connections
+  getBrokerConnections: async () => {
+    const res = await axios.get(`${BASE_URL}/api/broker`, { headers: getHeaders() })
+    return res.data
+  },
+
+  createBrokerConnection: async (data: { brokerName: string; accountNumber?: string; config?: any }) => {
+    const res = await axios.post(`${BASE_URL}/api/broker`, data, { headers: getHeaders() })
+    return res.data
+  },
+
+  updateBrokerConnection: async (id: string, data: { brokerName?: string; accountNumber?: string; status?: string; config?: any }) => {
+    const res = await axios.put(`${BASE_URL}/api/broker/${id}`, data, { headers: getHeaders() })
+    return res.data
+  },
+
+  deleteBrokerConnection: async (id: string) => {
+    const res = await axios.delete(`${BASE_URL}/api/broker/${id}`, { headers: getHeaders() })
+    return res.data
+  },
+
+  getBrokerSymbols: async (source: string) => {
+    const res = await axios.get(`${BASE_URL}/api/broker/symbols/${source}`, { headers: getHeaders() })
+    return res.data
+  },
 }

@@ -80,6 +80,19 @@ model Symbol {
 
   candles       Candle[]
   watchlistItems WatchlistItem[]
+  mappings       SymbolMapping[]
+}
+
+model SymbolMapping {
+  id           String   @id @default(uuid())
+  symbolId     String
+  source       String
+  sourceSymbol String
+  createdAt    DateTime @default(now())
+
+  symbol Symbol @relation(fields: [symbolId], references: [id])
+
+  @@unique([symbolId, source])
 }
 
 model Watchlist {
