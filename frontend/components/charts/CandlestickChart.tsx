@@ -262,7 +262,13 @@ export default function CandlestickChart({ symbol, color = '#6366f1' }: Candlest
       setError(null)
       setLoading(true)
 
-      const data = await api.getCandles(sym, tf, 300)
+      let data
+      try {
+        data = await api.getMT5Candles(sym, tf, 500)
+      } catch {
+        // Fall back to Twelve Data if MT5 fails
+        data = await api.getCandles(sym, tf, 300)
+      }
 
       if (!data.candles || data.candles.length === 0) {
         setError('No data available')
@@ -275,6 +281,22 @@ export default function CandlestickChart({ symbol, color = '#6366f1' }: Candlest
       rawCandlesRef.current = candles
 
       chartRef.current?.priceScale('right').applyOptions({ autoScale: true })
+
+      // Set price precision based on the data
+      const samplePrice = (candles[0] as any).close
+      let minMove = 0.00001
+      let precision = 5
+      if (samplePrice > 1000) { precision = 2; minMove = 0.01 }
+      else if (samplePrice > 100) { precision = 3; minMove = 0.001 }
+      else if (samplePrice > 10) { precision = 4; minMove = 0.0001 }
+
+      candleSeriesRef.current?.applyOptions({
+        priceFormat: {
+          type: 'price',
+          precision: precision,
+          minMove: minMove,
+        }
+      })
 
       updateChartData(candles, timezone)
     } catch (err) {
@@ -378,27 +400,128 @@ export default function CandlestickChart({ symbol, color = '#6366f1' }: Candlest
     fetchCandles(symbol, activeTimeframe)
   }, [symbol, activeTimeframe, fetchCandles])
 
-  // Auto-refresh
+  // Live update: update current candle from MT5 bid price every 2 seconds
+  const liveSymbolRef = useRef(symbol)
+  liveSymbolRef.current = symbol
+  const liveTimezoneRef = useRef(timezone)
+  liveTimezoneRef.current = timezone
+
+  useEffect(() => {
+    if (!chartReady.current || !candleSeriesRef.current) return
+
+    const timer = setInterval(async () => {
+      try {
+        if (!candleSeriesRef.current || rawCandlesRef.current.length === 0) return
+
+        const data = await api.getBridgePrices()
+        if (!data.prices || data.prices.length === 0) return
+
+        const brokerSymbol = liveSymbolRef.current.replace('/', '')
+        const price = data.prices.find((p: any) =>
+          p.symbol.toUpperCase() === brokerSymbol.toUpperCase()
+        )
+
+        if (!price) return
+
+        const candles = rawCandlesRef.current
+        const lastCandle = candles[candles.length - 1]
+        const offset = getTimezoneOffsetSeconds(liveTimezoneRef.current)
+        const bid = price.bid
+
+        // Update last candle
+        const updatedRaw = {
+          time: lastCandle.time,
+          open: (lastCandle as any).open,
+          high: Math.max((lastCandle as any).high, bid),
+          low: Math.min((lastCandle as any).low, bid),
+          close: bid,
+        } as CandlestickData
+
+        rawCandlesRef.current[candles.length - 1] = updatedRaw
+
+        candleSeriesRef.current.update({
+          time: ((updatedRaw.time as number) + offset) as UTCTimestamp,
+          open: (updatedRaw as any).open,
+          high: (updatedRaw as any).high,
+          low: (updatedRaw as any).low,
+          close: (updatedRaw as any).close,
+        })
+      } catch (err) {
+        // Silent fail
+      }
+    }, 2000)
+
+    return () => clearInterval(timer)
+  }, [])
+
+  // New bar detection: check for new candles frequently
   useEffect(() => {
     if (!chartReady.current) return
 
     const intervalMs: Record<string, number> = {
-      '1min': 10000,
-      '5min': 15000,
-      '15min': 20000,
-      '30min': 30000,
-      '1h': 60000,
-      '2h': 60000,
+      '1min': 5000,
+      '5min': 10000,
+      '15min': 15000,
+      '30min': 20000,
+      '1h': 30000,
+      '2h': 30000,
       '4h': 60000,
       '1day': 300000,
       '1week': 300000,
       '1month': 300000,
     }
-    const pollInterval = intervalMs[activeTimeframe] || 30000
+    const pollInterval = intervalMs[activeTimeframe] || 20000
 
-    const timer = setInterval(() => fetchCandles(symbol, activeTimeframe), pollInterval)
+    const timer = setInterval(async () => {
+      if (!chartReady.current || !candleSeriesRef.current) return
+
+      try {
+        let data
+        try {
+          data = await api.getMT5CandlesFresh(symbol, activeTimeframe, 5)
+        } catch {
+          return
+        }
+
+        if (!data.candles || data.candles.length === 0) return
+
+        const newCandles = data.candles as CandlestickData[]
+        const existing = rawCandlesRef.current
+
+        if (existing.length === 0) return
+
+        const lastExistingTime = existing[existing.length - 1].time as number
+        const newestFetchedTime = newCandles[newCandles.length - 1].time as number
+
+        // Only update if there's actually a new candle
+        if (newestFetchedTime <= lastExistingTime) return
+
+        // Merge new candles
+        let merged = [...existing]
+
+        newCandles.forEach((nc) => {
+          const idx = merged.findIndex((c) => (c.time as number) === (nc.time as number))
+          if (idx >= 0) {
+            merged[idx] = nc
+          } else if ((nc.time as number) > lastExistingTime) {
+            merged.push(nc)
+          }
+        })
+
+        // Trim to 500
+        if (merged.length > 500) {
+          merged = merged.slice(merged.length - 500)
+        }
+
+        rawCandlesRef.current = merged
+        updateChartData(merged, timezone)
+      } catch (err) {
+        // Silent fail
+      }
+    }, pollInterval)
+
     return () => clearInterval(timer)
-  }, [symbol, activeTimeframe, fetchCandles])
+  }, [symbol, activeTimeframe, timezone, updateChartData])
 
   // --- Indicator management ---
   const addIndicator = () => {

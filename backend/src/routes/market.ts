@@ -2,11 +2,151 @@ import { Router, Request, Response } from 'express'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import prisma from '../lib/prisma'
 import axios from 'axios'
+import { requestCandles as requestMT5Candles, livePrices } from '../bridge/mt5-watcher'
 
 const router = Router()
 
 const TWELVEDATA_BASE = 'https://api.twelvedata.com'
 const API_KEY = process.env.TWELVEDATA_API_KEY
+
+// Get candles from MT5 bridge
+router.get('/mt5/candles', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { symbol, interval = '30', bars = '500', fresh = 'false' } = req.query
+
+    if (!symbol) {
+      res.status(400).json({ error: 'Symbol is required' })
+      return
+    }
+
+    const symbolStr = (symbol as string).toUpperCase()
+    const intervalStr = interval as string
+    const barsNum = parseInt(bars as string)
+
+    // Map interval format: frontend sends '30min', '4h', '1day' — EA expects '30', '240', 'D'
+    const intervalMap: Record<string, string> = {
+      '1min': '1',
+      '5min': '5',
+      '15min': '15',
+      '30min': '30',
+      '1h': '60',
+      '2h': '120',
+      '4h': '240',
+      '1day': 'D',
+      '1week': 'W',
+      '1month': 'M',
+    }
+
+    const mt5Interval = intervalMap[intervalStr] || intervalStr
+
+    // Check DB cache first
+    const dbSymbol = await prisma.symbol.findFirst({
+      where: { name: { contains: symbolStr, mode: 'insensitive' } }
+    })
+
+    // Look up the broker symbol mapping
+    let brokerSymbol = symbolStr
+    if (dbSymbol) {
+      const mapping = await prisma.symbolMapping.findFirst({
+        where: { symbolId: dbSymbol.id, source: 'icmarkets-mt5' }
+      })
+      if (mapping) {
+        brokerSymbol = mapping.sourceSymbol
+      }
+    }
+
+    // Check if we have fresh cached data
+    if (dbSymbol) {
+      const cached = await prisma.candle.findMany({
+        where: {
+          symbolId: dbSymbol.id,
+          timeframe: intervalStr
+        },
+        orderBy: { timestamp: 'desc' },
+        take: barsNum
+      })
+
+      if (cached.length > 0) {
+        const newest = cached[0].timestamp
+        const now = new Date()
+        const intervalMs = getIntervalMs(intervalStr)
+
+        // If newest candle is less than 2 intervals old AND we have enough data AND not forced fresh
+        if (fresh !== 'true' && now.getTime() - newest.getTime() < intervalMs * 2 && cached.length >= Math.min(barsNum, 100)) {
+          const sorted = cached.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+          res.json({
+            symbol: symbolStr,
+            interval: intervalStr,
+            source: 'mt5-cache',
+            candles: sorted.map(formatCandle)
+          })
+          return
+        }
+      }
+    }
+
+    // Request from MT5
+    const data = await requestMT5Candles(brokerSymbol, mt5Interval, barsNum)
+
+    if (!data.candles || data.candles.length === 0) {
+      res.status(404).json({ error: 'No candle data returned from MT5' })
+      return
+    }
+
+    // Store in DB
+    if (dbSymbol) {
+      const upserts = data.candles.map((c: any) => ({
+        where: {
+          symbolId_timeframe_timestamp: {
+            symbolId: dbSymbol.id,
+            timeframe: intervalStr,
+            timestamp: new Date(c.time * 1000)
+          }
+        },
+        update: {
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close,
+          volume: c.volume || null
+        },
+        create: {
+          symbolId: dbSymbol.id,
+          timeframe: intervalStr,
+          timestamp: new Date(c.time * 1000),
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close,
+          volume: c.volume || null
+        }
+      }))
+
+      // Batch upsert
+      await Promise.all(upserts.map((u: any) => prisma.candle.upsert(u)))
+    }
+
+    // Return formatted
+    const candles = data.candles.map((c: any) => ({
+      time: c.time,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: c.volume || undefined
+    }))
+
+    res.json({
+      symbol: symbolStr,
+      interval: intervalStr,
+      source: 'mt5',
+      candles
+    })
+  } catch (err: any) {
+    console.error('MT5 candles error:', err.message)
+    res.status(500).json({ error: err.message || 'Failed to fetch candles from MT5' })
+  }
+})
 
 // Get candles for a symbol
 router.get('/candles', authenticate, async (req: AuthRequest, res: Response) => {

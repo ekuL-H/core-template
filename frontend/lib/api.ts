@@ -101,4 +101,20 @@ export const api = {
     const res = await axios.get(`${BASE_URL}/api/bridge/account`, { headers: getHeaders() })
     return res.data
   },
+
+  getMT5Candles: async (symbol: string, interval: string = '30min', outputsize: number = 500) => {
+    const res = await axios.get(`${BASE_URL}/api/market/mt5/candles`, {
+      params: { symbol, interval, bars: outputsize },
+      headers: getHeaders()
+    })
+    return res.data
+  },
+
+  getMT5CandlesFresh: async (symbol: string, interval: string = '30min', outputsize: number = 5) => {
+    const res = await axios.get(`${BASE_URL}/api/market/mt5/candles`, {
+      params: { symbol, interval, bars: outputsize, fresh: 'true' },
+      headers: getHeaders()
+    })
+    return res.data
+  },
 }
