@@ -64,12 +64,28 @@ const TIMEZONES = [
 ]
 
 // --- Calculation functions ---
+// MT5 broker server timezone (IC Markets uses EET - UTC+2/+3)
+const MT5_SERVER_TZ = 'Europe/Helsinki' // EET/EEST, same offset as IC Markets
+
 function getTimezoneOffsetSeconds(tzKey: string): number {
-  if (tzKey === 'UTC') return 0
   const now = new Date()
   const utcStr = now.toLocaleString('en-US', { timeZone: 'UTC' })
+  
+  // Calculate MT5 server offset (to convert MT5 timestamps to UTC)
+  const mt5Str = now.toLocaleString('en-US', { timeZone: MT5_SERVER_TZ })
+  const mt5OffsetSeconds = Math.round((new Date(mt5Str).getTime() - new Date(utcStr).getTime()) / 1000)
+
+  if (tzKey === 'UTC') {
+    // Just cancel the MT5 offset to get true UTC
+    return -mt5OffsetSeconds
+  }
+
+  // Calculate desired timezone offset from UTC
   const tzStr = now.toLocaleString('en-US', { timeZone: tzKey })
-  return Math.round((new Date(tzStr).getTime() - new Date(utcStr).getTime()) / 1000)
+  const desiredOffsetSeconds = Math.round((new Date(tzStr).getTime() - new Date(utcStr).getTime()) / 1000)
+
+  // Cancel MT5 offset, apply desired offset
+  return desiredOffsetSeconds - mt5OffsetSeconds
 }
 
 function applyTimezoneToCandles(candles: CandlestickData[], offsetSeconds: number): CandlestickData[] {
@@ -134,9 +150,14 @@ export default function CandlestickChart({ symbol, color = '#6366f1' }: Candlest
   const indicatorSeriesRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map())
   const chartReady = useRef(false)
   const rawCandlesRef = useRef<CandlestickData[]>([])
+  const isInitialLoad = useRef(true)
 
   const [activeTimeframe, setActiveTimeframe] = useState('30min')
-  const [favourites, setFavourites] = useState<string[]>(DEFAULT_FAVOURITES)
+  const [favourites, setFavourites] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return DEFAULT_FAVOURITES
+    const saved = localStorage.getItem('chart_tf_favourites')
+    return saved ? JSON.parse(saved) : DEFAULT_FAVOURITES
+  })
   const [showTfDropdown, setShowTfDropdown] = useState(false)
   const [timezone, setTimezone] = useState('Europe/London')
   const [showTzDropdown, setShowTzDropdown] = useState(false)
@@ -145,9 +166,17 @@ export default function CandlestickChart({ symbol, color = '#6366f1' }: Candlest
   const [error, setError] = useState<string | null>(null)
 
   // Indicator state
-  const [indicators, setIndicators] = useState<IndicatorConfig[]>(DEFAULT_INDICATORS)
+  const [indicators, setIndicators] = useState<IndicatorConfig[]>(() => {
+    if (typeof window === 'undefined') return DEFAULT_INDICATORS
+    const saved = localStorage.getItem('chart_indicators')
+    return saved ? JSON.parse(saved) : DEFAULT_INDICATORS
+  })
   const [showIndicatorModal, setShowIndicatorModal] = useState(false)
   const [editingIndicatorId, setEditingIndicatorId] = useState<string | null>(null)
+  
+  useEffect(() => {
+    localStorage.setItem('chart_indicators', JSON.stringify(indicators))
+  }, [indicators])
 
   // Clock
   useEffect(() => {
@@ -169,9 +198,11 @@ export default function CandlestickChart({ symbol, color = '#6366f1' }: Candlest
   }, [timezone])
 
   const toggleFavourite = (key: string) => {
-    setFavourites((prev) =>
-      prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]
-    )
+    setFavourites((prev) => {
+      const next = prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]
+      localStorage.setItem('chart_tf_favourites', JSON.stringify(next))
+      return next
+    })
   }
 
   // --- Sync indicator series with chart ---
@@ -245,7 +276,10 @@ export default function CandlestickChart({ symbol, color = '#6366f1' }: Candlest
       }
     })
 
-    chartRef.current?.timeScale().fitContent()
+    if (isInitialLoad.current) {
+      chartRef.current?.timeScale().fitContent()
+      isInitialLoad.current = false
+    }
   }, [indicators])
 
   // Re-apply timezone when it changes
@@ -397,6 +431,7 @@ export default function CandlestickChart({ symbol, color = '#6366f1' }: Candlest
 
     prevSymbol.current = symbol
     prevTimeframe.current = activeTimeframe
+    isInitialLoad.current = true
     fetchCandles(symbol, activeTimeframe)
   }, [symbol, activeTimeframe, fetchCandles])
 
@@ -624,6 +659,18 @@ export default function CandlestickChart({ symbol, color = '#6366f1' }: Candlest
               </div>
             )}
           </div>
+
+            {/* Reset view */}
+          <button
+            onClick={() => chartRef.current?.timeScale().fitContent()}
+            className="px-1.5 py-0.5 text-[10px] text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 rounded hover:bg-black/5 dark:hover:bg-white/5"
+            title="Reset view"
+          >
+            ⟲
+          </button>
+
+          {/* Divider */}
+          <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-1" />
 
           {/* Divider */}
           <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-1" />
