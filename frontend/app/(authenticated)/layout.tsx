@@ -14,11 +14,11 @@ export default function AuthenticatedLayout({
 
   return (
     <AuthProvider>
-      <div className="h-screen overflow-hidden bg-black/10 dark:bg-zinc-950">
+      <div className="h-screen overflow-hidden bg-background">
         <Header sidebarExpanded={expanded} />
         <Sidebar expanded={expanded} onToggle={() => setExpanded(!expanded)} />
         <main
-          className={`transition-all duration-300 pt-[35px] h-full ${
+          className={`transition-all duration-300 pt-11 h-full ${
             expanded ? 'ml-56' : 'ml-14'
           }`}
         >

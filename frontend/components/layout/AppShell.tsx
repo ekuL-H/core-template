@@ -14,16 +14,16 @@ interface AppShellProps {
 
 export default function AppShell({ children, breadcrumbOverrides }: AppShellProps) {
   return (
-    <div className="flex flex-col h-[calc(100vh-35px)]">
-      {/* Breadcrumb area - fixed at top */}
+    <div className="flex flex-col h-[calc(100vh-44px)]">
+      {/* Breadcrumb area */}
       <div className="h-[35px] flex items-center px-6 flex-shrink-0">
         <Breadcrumb overrides={breadcrumbOverrides} />
       </div>
       {/* Divider */}
       <div className="mx-6 flex-shrink-0">
-        <div className="h-px bg-black/10 dark:bg-white/10" />
+        <div className="h-px bg-border" />
       </div>
-      {/* Page content - scrolls independently */}
+      {/* Page content */}
       <div className="flex-1 overflow-y-auto p-6 min-h-0">
         {children}
       </div>
