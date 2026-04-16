@@ -50,7 +50,7 @@ export default function Breadcrumb({ overrides }: BreadcrumbProps) {
   const crumbs = buildCrumbs()
 
   return (
-    <div className="flex items-center gap-1.5 text-sm">
+    <div className="flex items-center gap-1.5 text-xs">
       {crumbs.map((crumb, i) => {
         const isLast = i === crumbs.length - 1
         return (
