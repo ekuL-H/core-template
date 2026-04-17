@@ -1,55 +1,91 @@
 'use client'
 
-import { ArrowLeft, ArrowRight, Plus, Search, Bell, Calendar, HelpCircle, ChevronDown } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Plus, Search, Bell, Calendar, HelpCircle, ChevronDown, X } from 'lucide-react'
+import { useTabs } from '@/lib/tabs'
 
 interface HeaderProps {
   sidebarExpanded: boolean
 }
 
 export default function Header({ sidebarExpanded }: HeaderProps) {
+  const { tabs, activeTabId, setActiveTab, addTab, closeTab, goBack, goForward, canGoBack, canGoForward } = useTabs()
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-11 flex items-stretch bg-sidebar border-b border-sidebar-border">
-      {/* Logo + Workspace - always full sidebar width */}
-      <div className="flex items-center gap-2 px-3 border-r border-sidebar-border flex-shrink-0 w-56">
-        {/* Logo */}
-        <div className="w-6 h-6 rounded-md bg-foreground flex items-center justify-center flex-shrink-0">
-          <span className="text-[8px] font-bold text-background tracking-tight">T-AI</span>
+      {/* Logo + Workspace */}
+      <div className="flex items-stretch border-r border-sidebar-border flex-shrink-0 w-56">
+        {/* Logo - centered in collapsed sidebar width */}
+        <div className="w-14 flex items-center justify-center flex-shrink-0">
+          <div className="w-6 h-6 rounded-md bg-foreground flex items-center justify-center">
+            <span className="text-[8px] font-bold text-background tracking-tight">T-AI</span>
+          </div>
         </div>
 
-        {/* Workspace switcher */}
-        <button className="flex items-center justify-between px-2 py-1 rounded-md text-[12px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors flex-1 min-w-0 border border-border">
-          <span className="truncate">Trading</span>
-          <ChevronDown className="w-3 h-3 flex-shrink-0 opacity-60 ml-1" />
-        </button>
+        {/* Workspace - fills remaining space */}
+        <div className="flex items-center flex-1 min-w-0 pr-3">
+          <button className="flex items-center justify-between px-2 py-1 rounded-md text-[12px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors w-full min-w-0 border border-border">
+            <span className="truncate">Trading</span>
+            <ChevronDown className="w-3 h-3 flex-shrink-0 opacity-60 ml-1" />
+          </button>
+        </div>
       </div>
 
       {/* Browser-style navigation area */}
-      <div className="flex items-center flex-1 px-3 gap-1 min-w-0">
-        <div className="flex items-center gap-0.5">
+      <div className="flex items-center flex-1 px-2 gap-1 min-w-0">
+        {/* Back / forward */}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
           <button
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            disabled
+            onClick={goBack}
+            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            disabled={!canGoBack}
             title="Back"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
           </button>
           <button
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            disabled
+            onClick={goForward}
+            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            disabled={!canGoForward}
             title="Forward"
           >
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="w-px h-4 bg-border mx-1" />
+        <div className="w-px h-4 bg-border mx-1 flex-shrink-0" />
 
-        <div className="flex items-center gap-1 flex-1 min-w-0 overflow-hidden">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-t bg-background border border-border border-b-background -mb-px text-[12px] max-w-[180px]">
-            <span className="truncate text-foreground">Dashboard</span>
-          </div>
+        {/* Tabs */}
+        <div className="flex items-end gap-0.5 flex-1 min-w-0 overflow-x-auto no-scrollbar">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`group flex items-center gap-1.5 px-3 py-1 text-[12px] max-w-[180px] min-w-[80px] rounded-t transition-colors relative ${
+                tab.id === activeTabId
+                  ? 'bg-background text-foreground border border-border border-b-background -mb-px z-10'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+              }`}
+            >
+              <span className="truncate flex-1 text-left">{tab.title}</span>
+              {tabs.length > 1 && (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    closeTab(tab.id)
+                  }}
+                  className={`flex-shrink-0 p-0.5 rounded hover:bg-muted transition-colors ${
+                    tab.id === activeTabId ? 'opacity-60 hover:opacity-100' : 'opacity-0 group-hover:opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <X className="w-2.5 h-2.5" />
+                </span>
+              )}
+            </button>
+          ))}
+
           <button
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            onClick={() => addTab()}
+            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex-shrink-0"
             title="New tab"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -58,7 +94,7 @@ export default function Header({ sidebarExpanded }: HeaderProps) {
       </div>
 
       {/* Right side icons */}
-      <div className="flex items-center gap-0.5 px-2 border-l border-sidebar-border">
+      <div className="flex items-center gap-0.5 px-2 border-l border-sidebar-border flex-shrink-0">
         <button
           className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           title="Search"
