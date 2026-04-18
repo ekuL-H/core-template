@@ -1,7 +1,7 @@
 import { Router, Response } from 'express'
-import { authenticate, AuthRequest } from '../middleware/auth'
-import prisma from '../lib/prisma'
-import { requestCandles as requestMT5Candles } from '../bridge/mt5-watcher'
+import { authenticate, AuthRequest } from '../../middleware/auth'
+import prisma from '../../lib/prisma'
+import { requestCandles as requestMT5Candles } from '../../trading/bridge/mt5-watcher'
 import { getIntervalMs, formatCandle, MT5_INTERVAL_MAP } from './marketHelpers'
 
 const router = Router()

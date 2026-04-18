@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import prisma from '../lib/prisma'
+import prisma from '../../lib/prisma'
 
 const MT5_FILES_PATH = '/mnt/c/Users/ekuL/AppData/Roaming/MetaQuotes/Terminal/49CDDEAA95A409ED22BD2287BB67CB9C/MQL5/Files'
 

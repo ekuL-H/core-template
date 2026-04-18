@@ -2,7 +2,6 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import dotenv from 'dotenv'
-import authRoutes from './routes/auth'
 
 dotenv.config()
 
@@ -17,27 +16,24 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Core API running' })
 })
 
+// --- Core routes ---
+import authRoutes from './routes/auth'
 app.use('/api/auth', authRoutes)
 
-import watchlistRoutes from './routes/watchlist'
+// --- Trading module routes ---
+import watchlistRoutes from './routes/trading/watchlist'
+import marketRoutes from './routes/trading/market'
+import brokerRoutes from './routes/trading/broker'
+import bridgeRoutes from './routes/trading/bridge'
+import { startMT5Watcher } from './trading/bridge/mt5-watcher'
+
 app.use('/api/watchlist', watchlistRoutes)
-
-import marketRoutes from './routes/market'
 app.use('/api/market', marketRoutes)
-
-import brokerRoutes from './routes/broker'
 app.use('/api/broker', brokerRoutes)
+app.use('/api/bridge', bridgeRoutes)
+
+startMT5Watcher()
 
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`)
 })
-
-import bridgeRoutes from './routes/bridge'
-import { startMT5Watcher } from './bridge/mt5-watcher'
-
-app.use('/api/bridge', bridgeRoutes)
-
-// Start MT5 file watcher
-startMT5Watcher()
-
-export default app
