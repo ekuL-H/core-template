@@ -113,4 +113,39 @@ export const tradingApi = {
     })
     return res.data
   },
+
+  // AI Labs
+  getModels: async () => {
+    const res = await axios.get(`${BASE_URL}/api/ai/models`, { headers: getHeaders() })
+    return res.data
+  },
+
+  aiChat: async (model: string, messages: { role: string; content: string }[]) => {
+    const res = await axios.post(`${BASE_URL}/api/ai/chat`, { model, messages }, {
+      headers: getHeaders(),
+      timeout: 300000
+    })
+    return res.data
+  },
+
+  aiVision: async (model: string, prompt: string, images: string[]) => {
+    const res = await axios.post(`${BASE_URL}/api/ai/vision`, { model, prompt, images }, {
+      headers: getHeaders(),
+      timeout: 300000
+    })
+    return res.data
+  },
+
+  pullModel: async (name: string) => {
+    const res = await axios.post(`${BASE_URL}/api/ai/models/pull`, { name }, {
+      headers: getHeaders(),
+      timeout: 600000
+    })
+    return res.data
+  },
+
+  deleteModel: async (name: string) => {
+    const res = await axios.delete(`${BASE_URL}/api/ai/models/${name}`, { headers: getHeaders() })
+    return res.data
+  },
 }
