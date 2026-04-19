@@ -6,7 +6,7 @@ import { api } from '@/lib/api'
 import { Watchlist, Symbol } from '@/lib/types'
 import AppShell from '@/components/layout/AppShell'
 import { Search, ArrowUpDown, Plus, X } from 'lucide-react'
-import CandlestickChart from '@/components/charts/CandlestickChart'
+import CandlestickChart from '@/components/trading/charts/CandlestickChart'
 
 type Tab = 'symbols' | 'automation' | 'analytics' | 'activity' | 'settings'
 
