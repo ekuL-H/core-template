@@ -35,6 +35,9 @@ app.use('/api/bridge', bridgeRoutes)
 import aiRoutes from './routes/trading/ai'
 app.use('/api/ai', aiRoutes)
 
+import datasetRoutes from './routes/trading/datasets'
+app.use('/api/datasets', datasetRoutes)
+
 startMT5Watcher()
 
 app.listen(PORT, () => {

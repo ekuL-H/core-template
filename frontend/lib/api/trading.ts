@@ -148,4 +148,55 @@ export const tradingApi = {
     const res = await axios.delete(`${BASE_URL}/api/ai/models/${name}`, { headers: getHeaders() })
     return res.data
   },
+
+  // Datasets
+  getDatasets: async () => {
+    const res = await axios.get(`${BASE_URL}/api/datasets`, { headers: getHeaders() })
+    return res.data
+  },
+
+  getDataset: async (id: string) => {
+    const res = await axios.get(`${BASE_URL}/api/datasets/${id}`, { headers: getHeaders() })
+    return res.data
+  },
+
+  createDataset: async (data: { name: string; description?: string; type?: string; color?: string }) => {
+    const res = await axios.post(`${BASE_URL}/api/datasets`, data, { headers: getHeaders() })
+    return res.data
+  },
+
+  updateDataset: async (id: string, data: { name?: string; description?: string; type?: string; color?: string }) => {
+    const res = await axios.put(`${BASE_URL}/api/datasets/${id}`, data, { headers: getHeaders() })
+    return res.data
+  },
+
+  deleteDataset: async (id: string) => {
+    const res = await axios.delete(`${BASE_URL}/api/datasets/${id}`, { headers: getHeaders() })
+    return res.data
+  },
+
+  uploadDatasetItems: async (datasetId: string, files: File[], label?: string, tags?: string[]) => {
+    const formData = new FormData()
+    files.forEach(f => formData.append('files', f))
+    if (label) formData.append('label', label)
+    if (tags) formData.append('tags', JSON.stringify(tags))
+    const res = await axios.post(`${BASE_URL}/api/datasets/${datasetId}/items`, formData, {
+      headers: { ...getHeaders(), 'Content-Type': 'multipart/form-data' }
+    })
+    return res.data
+  },
+
+  updateDatasetItem: async (datasetId: string, itemId: string, data: { label?: string; tags?: string[]; notes?: string }) => {
+    const res = await axios.put(`${BASE_URL}/api/datasets/${datasetId}/items/${itemId}`, data, { headers: getHeaders() })
+    return res.data
+  },
+
+  deleteDatasetItem: async (datasetId: string, itemId: string) => {
+    const res = await axios.delete(`${BASE_URL}/api/datasets/${datasetId}/items/${itemId}`, { headers: getHeaders() })
+    return res.data
+  },
+
+  getDatasetItemFile: (datasetId: string, itemId: string) => {
+    return `${BASE_URL}/api/datasets/${datasetId}/items/${itemId}/file`
+  },
 }

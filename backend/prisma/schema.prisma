@@ -18,6 +18,7 @@ model User {
   brokerConnections BrokerConnection[]
   watchlists     Watchlist[]
   aiModels       AiModel[]
+  datasets       Dataset[]
   workflows      Workflow[]
   journalEntries JournalEntry[]
   activityLogs   ActivityLog[]
@@ -147,6 +148,36 @@ model AiModel {
 
   user          User           @relation(fields: [userId], references: [id])
   workflowSteps WorkflowStep[]
+}
+
+model Dataset {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  type        String   @default("images")  // images, documents, mixed
+  color       String   @default("#06b6d4")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User          @relation(fields: [userId], references: [id])
+  items DatasetItem[]
+}
+
+model DatasetItem {
+  id        String   @id @default(uuid())
+  datasetId String
+  fileName  String
+  filePath  String
+  fileType  String   // image/png, image/jpeg, application/pdf, etc
+  fileSize  Int
+  label     String?
+  notes     String?
+  tags      String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dataset Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
 }
 
 model Workflow {
