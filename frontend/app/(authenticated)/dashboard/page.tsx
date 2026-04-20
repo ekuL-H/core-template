@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import AppShell from '@/components/layout/AppShell'
-import { Plus, X, GripVertical, Settings } from 'lucide-react'
+import { Plus, X, Settings } from 'lucide-react'
 import { WidgetConfig, AVAILABLE_WIDGETS, DEFAULT_LAYOUT } from '@/components/trading/dashboard/types'
 import {
   AccountWidget,
@@ -13,6 +13,9 @@ import {
   QuickActionsWidget
 } from '@/components/trading/dashboard/widgets'
 
+// @ts-ignore
+const GridLayout = require('react-grid-layout').default || require('react-grid-layout')
+
 const WIDGET_COMPONENTS: Record<string, React.ComponentType> = {
   'account': AccountWidget,
   'positions': PositionsWidget,
@@ -22,9 +25,10 @@ const WIDGET_COMPONENTS: Record<string, React.ComponentType> = {
   'quick-actions': QuickActionsWidget,
 }
 
-const STORAGE_KEY = 'dashboard_layout'
+const STORAGE_KEY = 'dashboard_widgets'
+const ROW_HEIGHT = 180
 
-function loadLayout(): WidgetConfig[] {
+function loadWidgets(): WidgetConfig[] {
   if (typeof window === 'undefined') return DEFAULT_LAYOUT
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
@@ -33,46 +37,68 @@ function loadLayout(): WidgetConfig[] {
   return DEFAULT_LAYOUT
 }
 
-function saveLayout(layout: WidgetConfig[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(layout))
+function saveWidgets(widgets: WidgetConfig[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(widgets))
 }
 
 export default function DashboardPage() {
-  const [widgets, setWidgets] = useState<WidgetConfig[]>(() => loadLayout())
+  const [widgets, setWidgets] = useState<WidgetConfig[]>(() => loadWidgets())
   const [editing, setEditing] = useState(false)
   const [showAddWidget, setShowAddWidget] = useState(false)
+  const [containerWidth, setContainerWidth] = useState(0)
 
-  useEffect(() => { saveLayout(widgets) }, [widgets])
+  useEffect(() => { saveWidgets(widgets) }, [widgets])
+
+  // Measure container width
+  useEffect(() => {
+    const updateWidth = () => {
+      const el = document.getElementById('dashboard-grid')
+      if (el) setContainerWidth(el.clientWidth)
+    }
+    updateWidth()
+    window.addEventListener('resize', updateWidth)
+    return () => window.removeEventListener('resize', updateWidth)
+  }, [])
+
+  const layout = useMemo(() => widgets.map(w => ({
+    i: w.id,
+    x: w.x,
+    y: w.y,
+    w: w.w,
+    h: w.h,
+    minW: 1,
+    maxW: 3,
+    minH: 1,
+    maxH: 2,
+    static: !editing,
+  })), [widgets, editing])
+
+  const handleLayoutChange = (newLayout: any[]) => {
+    setWidgets(prev => prev.map(widget => {
+      const item = newLayout.find((l: any) => l.i === widget.id)
+      if (!item) return widget
+      return { ...widget, x: item.x, y: item.y, w: item.w, h: item.h }
+    }))
+  }
 
   const addWidget = (type: string) => {
     const def = AVAILABLE_WIDGETS.find(w => w.type === type)
     if (!def) return
-    const newWidget: WidgetConfig = {
+    const maxY = widgets.reduce((max, w) => Math.max(max, w.y + w.h), 0)
+    setWidgets(prev => [...prev, {
       id: `w_${Date.now()}`,
       type,
-      width: def.defaultWidth as 1 | 2 | 3,
-      height: def.defaultHeight as 1 | 2,
-    }
-    setWidgets(prev => [...prev, newWidget])
+      x: 0,
+      y: maxY,
+      w: def.defaultW,
+      h: def.defaultH,
+    }])
     setShowAddWidget(false)
   }
 
   const removeWidget = (id: string) => {
     setWidgets(prev => prev.filter(w => w.id !== id))
   }
-
-  const cycleSize = (id: string) => {
-    setWidgets(prev => prev.map(w => {
-      if (w.id !== id) return w
-      // Cycle through sizes: 1x1 → 2x1 → 3x1 → 1x2 → 2x2 → 1x1
-      const sizes: [number, number][] = [[1, 1], [2, 1], [3, 1], [1, 2], [2, 2]]
-      const current = sizes.findIndex(([w2, h]) => w2 === w.width && h === w.height)
-      const next = sizes[(current + 1) % sizes.length]
-      return { ...w, width: next[0] as 1 | 2 | 3, height: next[1] as 1 | 2 }
-    }))
-  }
-
-  const ROW_HEIGHT = 180
 
   return (
     <AppShell>
@@ -100,50 +126,64 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Widget grid */}
-      <div
-        className="grid gap-3"
-        style={{ gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: `${ROW_HEIGHT}px` }}
-      >
-        {widgets.map(widget => {
-          const Component = WIDGET_COMPONENTS[widget.type]
-          if (!Component) return null
+      <div id="dashboard-grid">
+        {containerWidth > 0 && (
+          <GridLayout
+            className="layout"
+            layout={layout}
+            cols={3}
+            rowHeight={ROW_HEIGHT}
+            width={containerWidth}
+            margin={[12, 12]}
+            isDraggable={editing}
+            isResizable={editing}
+            onLayoutChange={handleLayoutChange}
+            draggableHandle=".widget-drag-handle"
+            resizeHandles={['se']}
+            compactType="vertical"
+            useCSSTransforms={true}
+          >
+            {widgets.map(widget => {
+              const Component = WIDGET_COMPONENTS[widget.type]
+              if (!Component) return null
 
-          return (
-            <div
-              key={widget.id}
-              className={`relative rounded-lg border border-border bg-card p-3 overflow-hidden transition-all ${
-                editing ? 'ring-1 ring-primary/20' : ''
-              }`}
-              style={{
-                gridColumn: `span ${widget.width}`,
-                gridRow: `span ${widget.height}`,
-              }}
-            >
-              {editing && (
-                <div className="absolute top-1.5 right-1.5 flex items-center gap-1 z-10">
-                  <button
-                    onClick={() => cycleSize(widget.id)}
-                    className="p-1 rounded bg-card border border-border hover:bg-accent text-[9px] text-muted-foreground"
-                    title="Resize"
-                  >
-                    {widget.width}x{widget.height}
-                  </button>
-                  <button
-                    onClick={() => removeWidget(widget.id)}
-                    className="p-1 rounded bg-card border border-border hover:bg-destructive/10"
-                  >
-                    <X className="w-3 h-3 text-destructive" />
-                  </button>
+              return (
+                <div
+                  key={widget.id}
+                  className={`rounded-lg border bg-card overflow-hidden transition-shadow ${
+                    editing ? 'ring-1 ring-primary/20 border-primary/30' : 'border-border'
+                  }`}
+                >
+                  {editing && (
+                    <div className="widget-drag-handle flex items-center justify-between px-3 py-1 bg-muted/30 cursor-grab active:cursor-grabbing border-b border-border/50">
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex flex-col gap-0.5">
+                          <div className="w-4 h-0.5 rounded-full bg-muted-foreground/30" />
+                          <div className="w-4 h-0.5 rounded-full bg-muted-foreground/30" />
+                        </div>
+                        <span className="text-[9px] text-muted-foreground">
+                          {AVAILABLE_WIDGETS.find(w => w.type === widget.type)?.label}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => removeWidget(widget.id)}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="p-0.5 rounded hover:bg-destructive/10"
+                      >
+                        <X className="w-3 h-3 text-destructive" />
+                      </button>
+                    </div>
+                  )}
+                  <div className={`${editing ? 'h-[calc(100%-28px)]' : 'h-full'} p-3 overflow-hidden`}>
+                    <Component />
+                  </div>
                 </div>
-              )}
-              <Component />
-            </div>
-          )
-        })}
+              )
+            })}
+          </GridLayout>
+        )}
       </div>
 
-      {/* Add widget modal */}
       {showAddWidget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-popover rounded-lg border border-border p-6 w-full max-w-md mx-4">
@@ -164,15 +204,13 @@ export default function DashboardPage() {
                       <p className="text-sm font-medium text-foreground">{w.label}</p>
                       <p className="text-xs text-muted-foreground">{w.description}</p>
                     </div>
-                    <span className="text-[10px] text-muted-foreground">{w.defaultWidth}x{w.defaultHeight}</span>
+                    <span className="text-[10px] text-muted-foreground">{w.defaultW}x{w.defaultH}</span>
                   </button>
                 )
               })}
             </div>
             <div className="flex justify-end mt-4">
-              <button onClick={() => setShowAddWidget(false)} className="px-3 py-1.5 text-xs rounded-md text-muted-foreground hover:bg-accent">
-                Close
-              </button>
+              <button onClick={() => setShowAddWidget(false)} className="px-3 py-1.5 text-xs rounded-md text-muted-foreground hover:bg-accent">Close</button>
             </div>
           </div>
         </div>

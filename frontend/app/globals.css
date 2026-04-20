@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "react-grid-layout/css/styles.css";
+@import "react-resizable/css/styles.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -164,5 +166,27 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* React Grid Layout overrides */
+  .react-grid-item.react-grid-placeholder {
+    background: oklch(0.55 0.2 265 / 15%) !important;
+    border: 2px dashed oklch(0.55 0.2 265 / 40%) !important;
+    border-radius: 0.5rem;
+    opacity: 1 !important;
+  }
+
+  .react-grid-item > .react-resizable-handle {
+    background: none !important;
+  }
+
+  .react-grid-item > .react-resizable-handle::after {
+    border-color: oklch(0.55 0 0 / 30%) !important;
+    width: 8px !important;
+    height: 8px !important;
+  }
+
+  .react-grid-item.resizing {
+    opacity: 0.8;
   }
 }
