@@ -199,4 +199,55 @@ export const tradingApi = {
   getDatasetItemFile: (datasetId: string, itemId: string) => {
     return `${BASE_URL}/api/datasets/${datasetId}/items/${itemId}/file`
   },
+
+  // Journal
+  getJournals: async () => {
+    const res = await axios.get(`${BASE_URL}/api/journal`, { headers: getHeaders() })
+    return res.data
+  },
+
+  getJournal: async (id: string) => {
+    const res = await axios.get(`${BASE_URL}/api/journal/${id}`, { headers: getHeaders() })
+    return res.data
+  },
+
+  createJournal: async (data: { name: string; description?: string; color?: string }) => {
+    const res = await axios.post(`${BASE_URL}/api/journal`, data, { headers: getHeaders() })
+    return res.data
+  },
+
+  updateJournal: async (id: string, data: { name?: string; description?: string; color?: string; columns?: any[] }) => {
+    const res = await axios.put(`${BASE_URL}/api/journal/${id}`, data, { headers: getHeaders() })
+    return res.data
+  },
+
+  deleteJournal: async (id: string) => {
+    const res = await axios.delete(`${BASE_URL}/api/journal/${id}`, { headers: getHeaders() })
+    return res.data
+  },
+
+  addJournalEntry: async (journalId: string, data: Record<string, any> = {}) => {
+    const res = await axios.post(`${BASE_URL}/api/journal/${journalId}/entries`, { data }, { headers: getHeaders() })
+    return res.data
+  },
+
+  updateJournalEntry: async (journalId: string, entryId: string, data: Record<string, any>) => {
+    const res = await axios.put(`${BASE_URL}/api/journal/${journalId}/entries/${entryId}`, { data }, { headers: getHeaders() })
+    return res.data
+  },
+
+  deleteJournalEntry: async (journalId: string, entryId: string) => {
+    const res = await axios.delete(`${BASE_URL}/api/journal/${journalId}/entries/${entryId}`, { headers: getHeaders() })
+    return res.data
+  },
+
+  addJournalColumn: async (journalId: string, column: { label: string; type: string; options?: string[]; width?: number }) => {
+    const res = await axios.post(`${BASE_URL}/api/journal/${journalId}/columns`, column, { headers: getHeaders() })
+    return res.data
+  },
+
+  deleteJournalColumn: async (journalId: string, colId: string) => {
+    const res = await axios.delete(`${BASE_URL}/api/journal/${journalId}/columns/${colId}`, { headers: getHeaders() })
+    return res.data
+  },
 }

@@ -38,6 +38,9 @@ app.use('/api/ai', aiRoutes)
 import datasetRoutes from './routes/trading/datasets'
 app.use('/api/datasets', datasetRoutes)
 
+import journalRoutes from './routes/trading/journal'
+app.use('/api/journal', journalRoutes)
+
 startMT5Watcher()
 
 app.listen(PORT, () => {
