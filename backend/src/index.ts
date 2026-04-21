@@ -20,6 +20,9 @@ app.get('/health', (req, res) => {
 import authRoutes from './routes/auth'
 app.use('/api/auth', authRoutes)
 
+import workspaceRoutes from './routes/workspace'
+app.use('/api/workspace', workspaceRoutes)
+
 // --- Trading module routes ---
 import watchlistRoutes from './routes/trading/watchlist'
 import marketRoutes from './routes/trading/market'

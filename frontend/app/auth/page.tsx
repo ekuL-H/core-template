@@ -28,7 +28,7 @@ export default function AuthPage() {
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('userId', res.data.userId)
 
-      window.location.href = '/dashboard'
+      window.location.href = '/workspaces'
     } catch (err: any) {
       setError(err.response?.data?.error || 'Something went wrong')
     } finally {

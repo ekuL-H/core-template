@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Moon, Sun, LogOut } from 'lucide-react'
 import { moduleConfig } from '@/config'
 import { logout } from '@/lib/auth'
+import { useWorkspace } from '@/lib/workspace'
 
 interface SidebarProps {
   expanded: boolean
@@ -34,6 +35,8 @@ export default function Sidebar({ expanded, onToggle }: SidebarProps) {
   const handleLogout = () => {
     logout()
     router.push('/auth')
+
+  const { workspace } = useWorkspace()
   }
 
   return (

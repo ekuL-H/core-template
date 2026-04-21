@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import AuthProvider from '@/components/providers/AuthProvider'
 import { TabsProvider } from '@/lib/tabs'
+import { WorkspaceProvider } from '@/lib/workspace'
 import Header from '@/components/layout/Header'
 import Sidebar from '@/components/layout/Sidebar'
 
@@ -15,7 +16,8 @@ export default function AuthenticatedLayout({
 
   return (
     <AuthProvider>
-      <TabsProvider>
+      <WorkspaceProvider>
+        <TabsProvider>
         <div className="h-screen overflow-hidden bg-background">
           <Header sidebarExpanded={expanded} />
           <Sidebar expanded={expanded} onToggle={() => setExpanded(!expanded)} />
@@ -27,7 +29,8 @@ export default function AuthenticatedLayout({
             {children}
           </main>
         </div>
-      </TabsProvider>
+        </TabsProvider>
+      </WorkspaceProvider>
     </AuthProvider>
   )
 }

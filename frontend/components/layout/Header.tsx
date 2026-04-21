@@ -2,6 +2,7 @@
 
 import { ArrowLeft, ArrowRight, Plus, Search, Bell, Calendar, HelpCircle, ChevronDown, X } from 'lucide-react'
 import { useTabs } from '@/lib/tabs'
+import { useWorkspace } from '@/lib/workspace'
 
 interface HeaderProps {
   sidebarExpanded: boolean
@@ -9,6 +10,7 @@ interface HeaderProps {
 
 export default function Header({ sidebarExpanded }: HeaderProps) {
   const { tabs, activeTabId, setActiveTab, addTab, closeTab, goBack, goForward, canGoBack, canGoForward } = useTabs()
+  const { workspace } = useWorkspace()
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-11 flex items-stretch bg-sidebar border-b border-sidebar-border">
@@ -24,7 +26,7 @@ export default function Header({ sidebarExpanded }: HeaderProps) {
         {/* Workspace - fills remaining space */}
         <div className="flex items-center flex-1 min-w-0 pr-3">
           <button className="flex items-center justify-between px-2 py-1 rounded-md text-[12px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors w-full min-w-0 border border-border">
-            <span className="truncate">Trading</span>
+            <span className="truncate">{workspace?.name || 'Workspace'}</span>
             <ChevronDown className="w-3 h-3 flex-shrink-0 opacity-60 ml-1" />
           </button>
         </div>
