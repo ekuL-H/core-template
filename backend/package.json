@@ -12,6 +12,11 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+
+  "prisma": {
+  "seed": "ts-node src/trading/seeds/trading-seed.ts"
+  },
+  
   "type": "commonjs",
   "dependencies": {
     "@prisma/client": "^5.22.0",

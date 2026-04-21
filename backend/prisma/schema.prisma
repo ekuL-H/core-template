@@ -46,6 +46,11 @@ model Workspace {
   updatedAt DateTime @updatedAt
 
   users   WorkspaceUser[]
+  watchlists       Watchlist[]
+  journals         Journal[]
+  datasets         Dataset[]
+  brokerConnections BrokerConnection[]
+  aiModels         AiModel[]
 }
 
 model WorkspaceUser {
@@ -62,6 +67,7 @@ model WorkspaceUser {
 model BrokerConnection {
   id            String   @id @default(uuid())
   userId        String
+  workspaceId String
   brokerName    String
   accountNumber String?
   status        String   @default("disconnected")
@@ -70,6 +76,7 @@ model BrokerConnection {
   updatedAt     DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
 }
 
 model Symbol {
@@ -99,12 +106,14 @@ model SymbolMapping {
 model Watchlist {
   id        String   @id @default(uuid())
   userId    String
+  workspaceId String
   name      String
   color     String   @default("#6366f1")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user  User            @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
   items WatchlistItem[]
 }
 
@@ -138,6 +147,7 @@ model Candle {
 model AiModel {
   id          String   @id @default(uuid())
   userId      String
+  workspaceId String
   name        String
   description String?
   type        String
@@ -147,12 +157,14 @@ model AiModel {
   updatedAt   DateTime @updatedAt
 
   user          User           @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
   workflowSteps WorkflowStep[]
 }
 
 model Dataset {
   id          String   @id @default(uuid())
   userId      String
+  workspaceId String
   name        String
   description String?
   type        String   @default("images")  // images, documents, mixed
@@ -161,6 +173,7 @@ model Dataset {
   updatedAt   DateTime @updatedAt
 
   user  User          @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
   items DatasetItem[]
 }
 
@@ -235,6 +248,7 @@ model WorkflowRunLog {
 model Journal {
   id          String   @id @default(uuid())
   userId      String
+  workspaceId String
   name        String
   description String?
   color       String   @default("#3b82f6")
@@ -243,6 +257,7 @@ model Journal {
   updatedAt   DateTime @updatedAt
 
   user    User           @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
   entries JournalEntry[]
 }
 

@@ -4,22 +4,21 @@ import prisma from '../../lib/prisma'
 
 const router = Router()
 
-// Get all watchlists for the logged in user
+// Get all watchlists for the logged in user in active workspace
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const watchlists = await prisma.watchlist.findMany({
-      where: { userId: req.userId },
+      where: { userId: req.userId, workspaceId: req.workspaceId },
       include: {
         items: {
-          include: {
-            symbol: true
-          },
+          include: { symbol: true },
           orderBy: { displayOrder: 'asc' }
         }
       }
     })
     res.json(watchlists)
   } catch (err) {
+    console.error('Watchlist GET error:', err)
     res.status(500).json({ error: 'Server error' })
   }
 })
@@ -29,7 +28,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { name, color } = req.body
     const watchlist = await prisma.watchlist.create({
-      data: { name, color, userId: req.userId as string }
+      data: { name, color, userId: req.userId as string, workspaceId: req.workspaceId as string }
     })
     res.status(201).json(watchlist)
   } catch (err) {
@@ -44,26 +43,19 @@ router.post('/:watchlistId/symbols', authenticate, async (req: AuthRequest, res:
     const { symbolId } = req.body
 
     const watchlist = await prisma.watchlist.findFirst({
-      where: { id: watchlistId, userId: req.userId as string }
+      where: { id: watchlistId, userId: req.userId as string, workspaceId: req.workspaceId }
     })
-
-    if (!watchlist) {
-      res.status(404).json({ error: 'Watchlist not found' })
-      return
-    }
+    if (!watchlist) { res.status(404).json({ error: 'Watchlist not found' }); return }
 
     const lastItem = await prisma.watchlistItem.findFirst({
       where: { watchlistId },
       orderBy: { displayOrder: 'desc' }
     })
 
-    const displayOrder = lastItem ? lastItem.displayOrder + 1 : 0
-
     const item = await prisma.watchlistItem.create({
-      data: { watchlistId, symbolId, displayOrder },
+      data: { watchlistId, symbolId, displayOrder: lastItem ? lastItem.displayOrder + 1 : 0 },
       include: { symbol: true }
     })
-
     res.status(201).json(item)
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
@@ -77,44 +69,31 @@ router.delete('/:watchlistId/symbols/:symbolId', authenticate, async (req: AuthR
     const symbolId = req.params.symbolId as string
 
     const watchlist = await prisma.watchlist.findFirst({
-      where: { id: watchlistId, userId: req.userId as string }
+      where: { id: watchlistId, userId: req.userId as string, workspaceId: req.workspaceId }
     })
+    if (!watchlist) { res.status(404).json({ error: 'Watchlist not found' }); return }
 
-    if (!watchlist) {
-      res.status(404).json({ error: 'Watchlist not found' })
-      return
-    }
-
-    await prisma.watchlistItem.deleteMany({
-      where: { watchlistId, symbolId }
-    })
-
+    await prisma.watchlistItem.deleteMany({ where: { watchlistId, symbolId } })
     res.json({ success: true })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
   }
 })
 
-// Update a watchlist (name, color)
+// Update a watchlist
 router.put('/:watchlistId', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const watchlistId = req.params.watchlistId as string
     const { name, color } = req.body
 
     const watchlist = await prisma.watchlist.findFirst({
-      where: { id: watchlistId, userId: req.userId as string }
+      where: { id: watchlistId, userId: req.userId as string, workspaceId: req.workspaceId }
     })
-    if (!watchlist) {
-      res.status(404).json({ error: 'Watchlist not found' })
-      return
-    }
+    if (!watchlist) { res.status(404).json({ error: 'Watchlist not found' }); return }
 
     const updated = await prisma.watchlist.update({
       where: { id: watchlistId },
-      data: {
-        ...(name && { name }),
-        ...(color && { color })
-      }
+      data: { ...(name && { name }), ...(color && { color }) }
     })
     res.json(updated)
   } catch (err) {
@@ -128,12 +107,9 @@ router.delete('/:watchlistId', authenticate, async (req: AuthRequest, res: Respo
     const watchlistId = req.params.watchlistId as string
 
     const watchlist = await prisma.watchlist.findFirst({
-      where: { id: watchlistId, userId: req.userId as string }
+      where: { id: watchlistId, userId: req.userId as string, workspaceId: req.workspaceId }
     })
-    if (!watchlist) {
-      res.status(404).json({ error: 'Watchlist not found' })
-      return
-    }
+    if (!watchlist) { res.status(404).json({ error: 'Watchlist not found' }); return }
 
     await prisma.watchlistItem.deleteMany({ where: { watchlistId } })
     await prisma.watchlist.delete({ where: { id: watchlistId } })
@@ -146,9 +122,7 @@ router.delete('/:watchlistId', authenticate, async (req: AuthRequest, res: Respo
 // Get all available symbols
 router.get('/symbols', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const symbols = await prisma.symbol.findMany({
-      orderBy: { name: 'asc' }
-    })
+    const symbols = await prisma.symbol.findMany({ orderBy: { name: 'asc' } })
     res.json(symbols)
   } catch (err) {
     res.status(500).json({ error: 'Server error' })

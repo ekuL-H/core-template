@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken'
 
 export interface AuthRequest extends Request {
   userId?: string
+  workspaceId?: string
 }
 
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -18,6 +19,7 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string }
     req.userId = decoded.userId
+    req.workspaceId = req.headers['x-workspace-id'] as string | undefined
     next()
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' })
