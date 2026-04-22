@@ -7,6 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================================
+// CORE MODELS — shared across all workspace types
+// ============================================================================
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -14,16 +18,19 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  profile        Profile?
+  // Core relations
+  profile    Profile?
+  workspaces WorkspaceUser[]
+  settings   Setting[]
+  activityLogs ActivityLog[]
+
+  // Module relations (workspace-scoped data links through workspace, but Prisma needs direct user relation)
+  watchlists        Watchlist[]
+  journals          Journal[]
+  datasets          Dataset[]
   brokerConnections BrokerConnection[]
-  watchlists     Watchlist[]
-  aiModels       AiModel[]
-  datasets       Dataset[]
-  workflows      Workflow[]
-  journals       Journal[]
-  activityLogs   ActivityLog[]
-  settings       Setting[]
-  workspaces     WorkspaceUser[]
+  aiModels          AiModel[]
+  workflows         Workflow[]
 }
 
 model Profile {
@@ -41,43 +48,58 @@ model Profile {
 model Workspace {
   id        String   @id @default(uuid())
   name      String
-  type      String
+  type      String   // 'trading', 'housing', etc
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users   WorkspaceUser[]
-  watchlists       Watchlist[]
-  journals         Journal[]
-  datasets         Dataset[]
+  users             WorkspaceUser[]
+  watchlists        Watchlist[]
+  journals          Journal[]
+  datasets          Dataset[]
   brokerConnections BrokerConnection[]
-  aiModels         AiModel[]
+  aiModels          AiModel[]
 }
 
 model WorkspaceUser {
   id          String   @id @default(uuid())
   userId      String
   workspaceId String
-  role        String   @default("member")
+  role        String   @default("member") // owner, admin, member, viewer
   createdAt   DateTime @default(now())
 
   user      User      @relation(fields: [userId], references: [id])
   workspace Workspace @relation(fields: [workspaceId], references: [id])
 }
 
-model BrokerConnection {
-  id            String   @id @default(uuid())
-  userId        String
-  workspaceId String
-  brokerName    String
-  accountNumber String?
-  status        String   @default("disconnected")
-  config        Json?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+model Setting {
+  id        String   @id @default(uuid())
+  userId    String
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([userId, key])
 }
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String
+  eventType   String
+  description String
+  relatedId   String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ============================================================================
+// TRADING MODULE — models specific to trading workspaces
+// ============================================================================
+
+// -- Market data (shared across workspaces, not user-scoped) --
 
 model Symbol {
   id          String   @id @default(uuid())
@@ -86,7 +108,7 @@ model Symbol {
   description String?
   createdAt   DateTime @default(now())
 
-  candles       Candle[]
+  candles        Candle[]
   watchlistItems WatchlistItem[]
   mappings       SymbolMapping[]
 }
@@ -94,8 +116,8 @@ model Symbol {
 model SymbolMapping {
   id           String   @id @default(uuid())
   symbolId     String
-  source       String
-  sourceSymbol String
+  source       String   // e.g. 'icmarkets-mt5'
+  sourceSymbol String   // e.g. 'EURUSD'
   createdAt    DateTime @default(now())
 
   symbol Symbol @relation(fields: [symbolId], references: [id])
@@ -103,35 +125,10 @@ model SymbolMapping {
   @@unique([symbolId, source])
 }
 
-model Watchlist {
-  id        String   @id @default(uuid())
-  userId    String
-  workspaceId String
-  name      String
-  color     String   @default("#6366f1")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user  User            @relation(fields: [userId], references: [id])
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
-  items WatchlistItem[]
-}
-
-model WatchlistItem {
-  id          String   @id @default(uuid())
-  watchlistId String
-  symbolId    String
-  displayOrder Int     @default(0)
-  createdAt   DateTime @default(now())
-
-  watchlist Watchlist @relation(fields: [watchlistId], references: [id])
-  symbol    Symbol    @relation(fields: [symbolId], references: [id])
-}
-
 model Candle {
   id        String   @id @default(uuid())
   symbolId  String
-  timeframe String
+  timeframe String   // '1min', '30min', '4h', '1day', etc
   open      Float
   high      Float
   low       Float
@@ -143,6 +140,81 @@ model Candle {
 
   @@unique([symbolId, timeframe, timestamp])
 }
+
+// -- Broker connections (workspace-scoped) --
+
+model BrokerConnection {
+  id            String   @id @default(uuid())
+  userId        String
+  workspaceId   String
+  brokerName    String
+  accountNumber String?
+  status        String   @default("disconnected") // disconnected, connected, error
+  config        Json?    // source, server, etc
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+}
+
+// -- Watchlists (workspace-scoped) --
+
+model Watchlist {
+  id          String   @id @default(uuid())
+  userId      String
+  workspaceId String
+  name        String
+  color       String   @default("#6366f1")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User            @relation(fields: [userId], references: [id])
+  workspace Workspace       @relation(fields: [workspaceId], references: [id])
+  items     WatchlistItem[]
+}
+
+model WatchlistItem {
+  id           String   @id @default(uuid())
+  watchlistId  String
+  symbolId     String
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  watchlist Watchlist @relation(fields: [watchlistId], references: [id])
+  symbol    Symbol    @relation(fields: [symbolId], references: [id])
+}
+
+// -- Journal (workspace-scoped) --
+
+model Journal {
+  id          String   @id @default(uuid())
+  userId      String
+  workspaceId String
+  name        String
+  description String?
+  color       String   @default("#3b82f6")
+  columns     Json     @default("[]") // column config: [{id, label, type, options?, width}]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User           @relation(fields: [userId], references: [id])
+  workspace Workspace      @relation(fields: [workspaceId], references: [id])
+  entries   JournalEntry[]
+}
+
+model JournalEntry {
+  id        String   @id @default(uuid())
+  journalId String
+  rowOrder  Int      @default(0)
+  data      Json     @default("{}") // cell values keyed by column id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  journal Journal @relation(fields: [journalId], references: [id], onDelete: Cascade)
+}
+
+// -- AI / ML (workspace-scoped) --
 
 model AiModel {
   id          String   @id @default(uuid())
@@ -157,7 +229,7 @@ model AiModel {
   updatedAt   DateTime @updatedAt
 
   user          User           @relation(fields: [userId], references: [id])
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id])
   workflowSteps WorkflowStep[]
 }
 
@@ -167,14 +239,14 @@ model Dataset {
   workspaceId String
   name        String
   description String?
-  type        String   @default("images")  // images, documents, mixed
+  type        String   @default("images") // images, documents, mixed
   color       String   @default("#06b6d4")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user  User          @relation(fields: [userId], references: [id])
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
-  items DatasetItem[]
+  user      User          @relation(fields: [userId], references: [id])
+  workspace Workspace     @relation(fields: [workspaceId], references: [id])
+  items     DatasetItem[]
 }
 
 model DatasetItem {
@@ -193,6 +265,8 @@ model DatasetItem {
   dataset Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
 }
 
+// -- Automation / Workflows (not yet workspace-scoped, future refactor) --
+
 model Workflow {
   id          String   @id @default(uuid())
   userId      String
@@ -208,90 +282,39 @@ model Workflow {
 }
 
 model WorkflowStep {
-  id            String   @id @default(uuid())
-  workflowId    String
-  stepNumber    Int
-  stepType      String
-  config        Json
-  onValid       String?
-  onInvalid     String?
-  aiModelId     String?
-  createdAt     DateTime @default(now())
+  id         String   @id @default(uuid())
+  workflowId String
+  stepNumber Int
+  stepType   String
+  config     Json
+  onValid    String?
+  onInvalid  String?
+  aiModelId  String?
+  createdAt  DateTime @default(now())
 
-  workflow Workflow  @relation(fields: [workflowId], references: [id])
-  aiModel  AiModel?  @relation(fields: [aiModelId], references: [id])
+  workflow Workflow @relation(fields: [workflowId], references: [id])
+  aiModel  AiModel? @relation(fields: [aiModelId], references: [id])
 }
 
 model WorkflowRun {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   workflowId String
-  startedAt  DateTime @default(now())
+  startedAt  DateTime  @default(now())
   finishedAt DateTime?
-  status     String   @default("running")
+  status     String    @default("running")
 
   workflow Workflow         @relation(fields: [workflowId], references: [id])
   logs     WorkflowRunLog[]
 }
 
 model WorkflowRunLog {
-  id            String   @id @default(uuid())
-  workflowRunId String
-  stepNumber    Int
-  result        String?
-  aiResponse    String?
+  id             String   @id @default(uuid())
+  workflowRunId  String
+  stepNumber     Int
+  result         String?
+  aiResponse     String?
   screenshotPath String?
-  timestamp     DateTime @default(now())
+  timestamp      DateTime @default(now())
 
   workflowRun WorkflowRun @relation(fields: [workflowRunId], references: [id])
-}
-
-model Journal {
-  id          String   @id @default(uuid())
-  userId      String
-  workspaceId String
-  name        String
-  description String?
-  color       String   @default("#3b82f6")
-  columns     Json     @default("[]")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user    User           @relation(fields: [userId], references: [id])
-  workspace Workspace @relation(fields: [workspaceId], references: [id])
-  entries JournalEntry[]
-}
-
-model JournalEntry {
-  id         String   @id @default(uuid())
-  journalId  String
-  rowOrder   Int      @default(0)
-  data       Json     @default("{}")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  journal Journal @relation(fields: [journalId], references: [id], onDelete: Cascade)
-}
-
-model ActivityLog {
-  id          String   @id @default(uuid())
-  userId      String
-  eventType   String
-  description String
-  relatedId   String?
-  createdAt   DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id])
-}
-
-model Setting {
-  id        String   @id @default(uuid())
-  userId    String
-  key       String
-  value     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@unique([userId, key])
 }
