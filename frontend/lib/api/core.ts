@@ -28,4 +28,14 @@ export const coreApi = {
     const res = await axios.delete(`${BASE_URL}/api/workspace/${id}`, { headers: getHeaders() })
     return res.data
   },
+
+  archiveWorkspace: async (id: string) => {
+    const res = await axios.post(`${BASE_URL}/api/workspace/${id}/archive`, {}, { headers: getHeaders() })
+    return res.data
+  },
+
+  restoreWorkspace: async (id: string) => {
+    const res = await axios.post(`${BASE_URL}/api/workspace/${id}/restore`, {}, { headers: getHeaders() })
+    return res.data
+  },
 }

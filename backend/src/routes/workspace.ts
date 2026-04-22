@@ -9,7 +9,7 @@ const WORKSPACE_TEMPLATES = [
   { type: 'housing', name: 'Housing Manager', description: 'Property management, tenants, maintenance' },
 ]
 
-// Get all workspaces for user
+// Get all workspaces for user (excludes deleted, includes archived)
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const workspaceUsers = await prisma.workspaceUser.findMany({
@@ -21,11 +21,13 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
       },
       orderBy: { createdAt: 'asc' }
     })
-    const workspaces = workspaceUsers.map(wu => ({
-      ...wu.workspace,
-      role: wu.role,
-      memberCount: wu.workspace._count.users
-    }))
+    const workspaces = workspaceUsers
+      .filter(wu => wu.workspace.status !== 'deleted')
+      .map(wu => ({
+        ...wu.workspace,
+        role: wu.role,
+        memberCount: wu.workspace._count.users
+      }))
     res.json(workspaces)
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch workspaces' })
@@ -45,20 +47,15 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       res.status(400).json({ error: 'Name and type are required' })
       return
     }
-
     const workspace = await prisma.workspace.create({
       data: {
         name,
         type,
         users: {
-          create: {
-            userId: req.userId!,
-            role: 'owner'
-          }
+          create: { userId: req.userId!, role: 'owner' }
         }
       }
     })
-
     res.json(workspace)
   } catch (err) {
     res.status(500).json({ error: 'Failed to create workspace' })
@@ -69,15 +66,10 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { name } = req.body
-
-    // Verify user is owner/admin
     const membership = await prisma.workspaceUser.findFirst({
       where: { workspaceId: req.params.id as string, userId: req.userId!, role: { in: ['owner', 'admin'] } }
     })
-    if (!membership) {
-      res.status(403).json({ error: 'Not authorized' })
-      return
-    }
+    if (!membership) { res.status(403).json({ error: 'Not authorized' }); return }
 
     const workspace = await prisma.workspace.update({
       where: { id: req.params.id as string },
@@ -89,22 +81,77 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   }
 })
 
-// Delete workspace
+// Archive workspace (soft delete — recoverable for 30 days)
+router.post('/:id/archive', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string
+    const membership = await prisma.workspaceUser.findFirst({
+      where: { workspaceId: id, userId: req.userId!, role: 'owner' }
+    })
+    if (!membership) { res.status(403).json({ error: 'Only owner can archive workspace' }); return }
+
+    const workspace = await prisma.workspace.update({
+      where: { id },
+      data: { status: 'archived', archivedAt: new Date() }
+    })
+    res.json(workspace)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to archive workspace' })
+  }
+})
+
+// Restore archived workspace
+router.post('/:id/restore', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string
+    const membership = await prisma.workspaceUser.findFirst({
+      where: { workspaceId: id, userId: req.userId!, role: 'owner' }
+    })
+    if (!membership) { res.status(403).json({ error: 'Only owner can restore workspace' }); return }
+
+    const workspace = await prisma.workspace.update({
+      where: { id },
+      data: { status: 'active', archivedAt: null }
+    })
+    res.json(workspace)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to restore workspace' })
+  }
+})
+
+// Permanently delete workspace and all data
 router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const id = req.params.id as string
     const membership = await prisma.workspaceUser.findFirst({
-      where: { workspaceId: req.params.id as string, userId: req.userId!, role: 'owner' }
+      where: { workspaceId: id, userId: req.userId!, role: 'owner' }
     })
-    if (!membership) {
-      res.status(403).json({ error: 'Only owner can delete workspace' })
-      return
-    }
+    if (!membership) { res.status(403).json({ error: 'Only owner can delete workspace' }); return }
 
-    // Delete membership first, then workspace
-    await prisma.workspaceUser.deleteMany({ where: { workspaceId: req.params.id as string } })
-    await prisma.workspace.delete({ where: { id: req.params.id as string } })
+    // Delete all workspace-scoped data
+    await prisma.journalEntry.deleteMany({
+      where: { journal: { workspaceId: id } }
+    })
+    await prisma.journal.deleteMany({ where: { workspaceId: id } })
+
+    await prisma.datasetItem.deleteMany({
+      where: { dataset: { workspaceId: id } }
+    })
+    await prisma.dataset.deleteMany({ where: { workspaceId: id } })
+
+    await prisma.watchlistItem.deleteMany({
+      where: { watchlist: { workspaceId: id } }
+    })
+    await prisma.watchlist.deleteMany({ where: { workspaceId: id } })
+
+    await prisma.brokerConnection.deleteMany({ where: { workspaceId: id } })
+    await prisma.aiModel.deleteMany({ where: { workspaceId: id } })
+    await prisma.workspaceUser.deleteMany({ where: { workspaceId: id } })
+    await prisma.workspace.delete({ where: { id } })
+
     res.json({ success: true })
   } catch (err) {
+    console.error('Workspace delete error:', err)
     res.status(500).json({ error: 'Failed to delete workspace' })
   }
 })

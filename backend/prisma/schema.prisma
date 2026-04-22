@@ -46,11 +46,13 @@ model Profile {
 }
 
 model Workspace {
-  id        String   @id @default(uuid())
-  name      String
-  type      String   // 'trading', 'housing', etc
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String    @id @default(uuid())
+  name       String
+  type       String    // 'trading', 'housing', etc
+  status     String    @default("active") // active, archived, deleted
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   users             WorkspaceUser[]
   watchlists        Watchlist[]

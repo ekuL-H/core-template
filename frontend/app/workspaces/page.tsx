@@ -81,6 +81,26 @@ export default function WorkspacesPage() {
     }
   }
 
+  const handleArchive = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await coreApi.archiveWorkspace(id)
+      fetchData()
+    } catch (err) {
+      console.error('Failed to archive workspace', err)
+    }
+  }
+
+  const handleRestore = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await coreApi.restoreWorkspace(id)
+      fetchData()
+    } catch (err) {
+      console.error('Failed to restore workspace', err)
+    }
+  }
+
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
     try {
@@ -95,6 +115,9 @@ export default function WorkspacesPage() {
     localStorage.setItem('activeWorkspace', JSON.stringify({ id: ws.id, type: ws.type, name: (ws as any).name }))
     router.push('/dashboard')
   }
+
+  const activeWorkspaces = workspaces.filter((ws: any) => ws.status === 'active')
+  const archivedWorkspaces = workspaces.filter((ws: any) => ws.status === 'archived')
 
   if (!authed) return null
 
@@ -146,13 +169,56 @@ export default function WorkspacesPage() {
                     <div className="flex items-center gap-2">
                       {ws.role === 'owner' && (
                         <button
-                          onClick={(e) => handleDelete(ws.id, e)}
+                          onClick={(e) => handleArchive(ws.id, e)}
                           className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-all"
                         >
                           <Trash2 className="w-3.5 h-3.5 text-destructive" />
                         </button>
                       )}
                       <ArrowRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {archivedWorkspaces.length > 0 && (
+          <div className="mb-8">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Archived</p>
+            <div className="space-y-2">
+              {archivedWorkspaces.map((ws: any) => {
+                const Icon = TYPE_ICONS[ws.type] || LayoutDashboard
+                const color = TYPE_COLORS[ws.type] || '#6366f1'
+                const archivedDate = ws.archivedAt ? new Date(ws.archivedAt) : new Date()
+                const deleteDate = new Date(archivedDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+                const daysLeft = Math.max(0, Math.ceil((deleteDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+
+                return (
+                  <div key={ws.id} className="flex items-center gap-4 p-4 rounded-lg border border-border bg-card opacity-60">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color + '20' }}>
+                      <Icon className="w-5 h-5" style={{ color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-card-foreground">{ws.name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Archived · deletes in {daysLeft} days
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => handleRestore(ws.id, e)}
+                        className="px-2 py-1 text-[11px] rounded-md text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        Restore
+                      </button>
+                      <button
+                        onClick={(e) => handleDelete(ws.id, e)}
+                        className="px-2 py-1 text-[11px] rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        Delete now
+                      </button>
                     </div>
                   </div>
                 )
