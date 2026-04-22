@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
+import { tradingApi as api } from '@/lib/api/trading'
 import AppShell from '@/components/layout/AppShell'
 import { Send, Bot, User, Loader2, Image, X, ChevronDown, Plus, Trash2, Upload, Tag, FileText, ImageIcon, FolderOpen } from 'lucide-react'
 

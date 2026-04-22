@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
+import { tradingApi as api } from '@/lib/api/trading'
 import AppShell from '@/components/layout/AppShell'
 import { Plus, Trash2, Pencil, BookOpen } from 'lucide-react'
 
@@ -56,7 +56,7 @@ export default function JournalPage() {
       setNewName('')
       setNewDesc('')
       setNewColor(PRESET_COLORS[0])
-      router.push(`/journal/${journal.id}`)
+      router.push(`/trading/journal/${journal.id}`)
     } catch (err) {
       console.error('Failed to create journal', err)
     }
@@ -110,7 +110,7 @@ export default function JournalPage() {
           <div
             key={journal.id}
             className="group flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer hover:bg-accent transition-colors"
-            onClick={() => router.push(`/journal/${journal.id}`)}
+            onClick={() => router.push(`/trading/journal/${journal.id}`)}
           >
             <div className="w-2 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: journal.color }} />
             <div className="flex-1 min-w-0">

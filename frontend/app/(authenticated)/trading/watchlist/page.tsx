@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
-import { Watchlist } from '@/lib/types'
+import { tradingApi as api } from '@/lib/api/trading'
+import { Watchlist } from '@/lib/types/trading'
 import AppShell from '@/components/layout/AppShell'
 import { Plus, Trash2, Pencil } from 'lucide-react'
 
@@ -109,7 +109,7 @@ export default function WatchlistPage() {
           <div
             key={wl.id}
             className="group relative rounded-lg border border-border bg-card overflow-hidden cursor-pointer hover:border-border/80 hover:shadow-sm transition-all"
-            onClick={() => router.push(`/watchlist/${wl.id}`)}
+            onClick={() => router.push(`/trading/watchlist/${wl.id}`)}
           >
             <div className="h-1.5" style={{ backgroundColor: wl.color }} />
             <div className="p-4">

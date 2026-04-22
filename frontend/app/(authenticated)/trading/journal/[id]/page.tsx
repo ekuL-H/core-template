@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
+import { tradingApi as api } from '@/lib/api/trading'
 import AppShell from '@/components/layout/AppShell'
 import { Plus, Trash2, ChevronDown, ImageIcon, ExternalLink } from 'lucide-react'
 
@@ -69,11 +69,11 @@ export default function JournalDetailPage() {
   const fetchJournal = async () => {
     try {
       const data = await api.getJournal(journalId)
-      if (!data) { router.push('/journal'); return }
+      if (!data) { router.push('/trading/journal'); return }
       setJournal(data)
     } catch (err) {
       console.error('Failed to fetch journal', err)
-      router.push('/journal')
+      router.push('/trading/journal')
     } finally {
       setLoading(false)
     }
@@ -181,7 +181,7 @@ export default function JournalDetailPage() {
   if (!journal) return null
 
   const breadcrumbs = [
-    { label: 'Journal', href: '/journal' },
+    { label: 'Journal', href: '/trading/journal' },
     { label: journal.name },
   ]
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
+import { tradingApi as api } from '@/lib/api/trading'
 import { Wallet, TrendingUp, TrendingDown, Activity, Bot, ArrowRight, Newspaper, Clock, List, Zap } from 'lucide-react'
 
 // ─── Account Overview Widget ───
@@ -174,7 +174,7 @@ export function WatchlistWidget() {
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Live Prices</span>
         </div>
         <button
-          onClick={() => router.push('/watchlist')}
+          onClick={() => router.push('/trading/watchlist')}
           className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5"
         >
           View all <ArrowRight className="w-2.5 h-2.5" />
@@ -237,7 +237,7 @@ export function AIStatusWidget() {
         </div>
       </div>
       <button
-        onClick={() => router.push('/ai-labs')}
+        onClick={() => router.push('/trading/ai-labs')}
         className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 mt-1"
       >
         Open AI Labs <ArrowRight className="w-2.5 h-2.5" />
@@ -251,9 +251,9 @@ export function QuickActionsWidget() {
   const router = useRouter()
 
   const actions = [
-    { label: 'New Watchlist', href: '/watchlist', icon: List },
-    { label: 'AI Chat', href: '/ai-labs', icon: Bot },
-    { label: 'Journal Entry', href: '/journal', icon: Zap },
+    { label: 'New Watchlist', href: '/trading/watchlist', icon: List },
+    { label: 'AI Chat', href: '/trading/ai-labs', icon: Bot },
+    { label: 'Journal Entry', href: '/trading/journal', icon: Zap },
   ]
 
   return (

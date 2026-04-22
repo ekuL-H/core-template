@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
-import { Watchlist, Symbol } from '@/lib/types'
+import { tradingApi as api } from '@/lib/api/trading'
+import { Watchlist, Symbol } from '@/lib/types/trading'
 import AppShell from '@/components/layout/AppShell'
 import { Search, ArrowUpDown, Plus, X } from 'lucide-react'
 import CandlestickChart from '@/components/trading/charts/CandlestickChart'
@@ -56,7 +56,7 @@ export default function WatchlistDetailPage() {
         api.getSymbols()
       ])
       const found = watchlists.find((wl: Watchlist) => wl.id === watchlistId)
-      if (!found) { router.push('/watchlist'); return }
+      if (!found) { router.push('/trading/watchlist'); return }
       setWatchlist(found)
       setAllSymbols(symbols)
     } catch (err) {
@@ -146,7 +146,7 @@ export default function WatchlistDetailPage() {
     .filter((s) => s.name.toLowerCase().includes(symbolSearch.toLowerCase()))
 
   const breadcrumbs = [
-    { label: 'Watchlists', href: '/watchlist' },
+    { label: 'Watchlists', href: '/trading/watchlist' },
     { label: watchlist.name },
   ]
 

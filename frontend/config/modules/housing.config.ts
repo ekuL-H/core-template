@@ -13,11 +13,11 @@ export const housingConfig = {
   name: 'Housing Management',
   sidebar: [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Properties', href: '/properties', icon: Building2 },
-    { label: 'Tenants', href: '/tenants', icon: Users },
-    { label: 'Maintenance', href: '/maintenance', icon: Wrench },
-    { label: 'Payments', href: '/payments', icon: CreditCard },
-    { label: 'Documents', href: '/documents', icon: FileText },
+    { label: 'Properties', href: '/housing/properties', icon: Building2 },
+    { label: 'Tenants', href: '/housing/tenants', icon: Users },
+    { label: 'Maintenance', href: '/housing/maintenance', icon: Wrench },
+    { label: 'Payments', href: '/housing/payments', icon: CreditCard },
+    { label: 'Documents', href: '/housing/documents', icon: FileText },
     { label: 'Settings', href: '/settings', icon: Settings },
   ]
 }

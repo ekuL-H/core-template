@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { api } from '@/lib/api'
-import { BrokerConnection } from '@/lib/types'
+import { tradingApi as api } from '@/lib/api/trading'
+import { BrokerConnection } from '@/lib/types/trading'
 import AppShell from '@/components/layout/AppShell'
 import { Plus, Trash2, Wifi, WifiOff } from 'lucide-react'
 

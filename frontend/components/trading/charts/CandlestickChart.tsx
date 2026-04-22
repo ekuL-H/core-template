@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts'
 import type { IChartApi, ISeriesApi, CandlestickData, UTCTimestamp } from 'lightweight-charts'
-import { api } from '@/lib/api'
+import { tradingApi as api } from '@/lib/api/trading'
 import { Clock, ChevronDown, Star, BarChart3 } from 'lucide-react'
 import { getTimezoneOffsetSeconds, TIMEZONES } from './timezone'
 import {
