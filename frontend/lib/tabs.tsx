@@ -23,6 +23,7 @@ interface TabsContextType {
   goForward: () => void
   canGoBack: boolean
   canGoForward: boolean
+  resetTabs: () => void
 }
 
 const TabsContext = createContext<TabsContextType | null>(null)
@@ -38,58 +39,61 @@ function generateId() {
 }
 
 function getTitleForRoute(route: string): string {
-  // Check sidebar config first
   const sidebarItem = moduleConfig.sidebar.find((item: any) => item.href === route)
   if (sidebarItem) return sidebarItem.label
 
-  // Check if it's a sub-route of a sidebar item
   const parentItem = moduleConfig.sidebar.find((item: any) =>
     route.startsWith(item.href + '/')
   )
   if (parentItem) {
     const segments = route.split('/')
     const lastSegment = segments[segments.length - 1]
-    // If it's a UUID-like string, just use parent label + "Detail"
-    if (lastSegment.length > 8 && lastSegment.includes('-')) {
-      return parentItem.label
-    }
+    if (lastSegment.length > 8 && lastSegment.includes('-')) return parentItem.label
     return lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1).replace(/-/g, ' ')
   }
 
-  // Fallback
   const segments = route.split('/').filter(Boolean)
   if (segments.length === 0) return 'Dashboard'
   const last = segments[segments.length - 1]
   return last.charAt(0).toUpperCase() + last.slice(1).replace(/-/g, ' ')
 }
 
-const STORAGE_KEY = 'browser_tabs'
+const MAX_HISTORY = 50
+
+function getStorageKey(): string {
+  if (typeof window === 'undefined') return 'browser_tabs'
+  try {
+    const ws = localStorage.getItem('activeWorkspace')
+    if (ws) {
+      const parsed = JSON.parse(ws)
+      if (parsed.id) return `browser_tabs_${parsed.id}`
+    }
+  } catch {}
+  return 'browser_tabs'
+}
+
+const DEFAULT_TABS = {
+  tabs: [{ id: 'tab_default', title: 'Dashboard', route: '/dashboard', history: ['/dashboard'], historyIndex: 0 }],
+  activeTabId: 'tab_default'
+}
 
 function loadTabs(): { tabs: Tab[]; activeTabId: string } {
-  if (typeof window === 'undefined') {
-    return {
-      tabs: [{ id: 'tab_default', title: 'Dashboard', route: '/dashboard', history: ['/dashboard'], historyIndex: 0 }],
-      activeTabId: 'tab_default'
-    }
-  }
+  if (typeof window === 'undefined') return DEFAULT_TABS
 
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = localStorage.getItem(getStorageKey())
     if (saved) {
       const parsed = JSON.parse(saved)
       if (parsed.tabs?.length > 0) return parsed
     }
   } catch {}
 
-  return {
-    tabs: [{ id: 'tab_default', title: 'Dashboard', route: '/dashboard', history: ['/dashboard'], historyIndex: 0 }],
-    activeTabId: 'tab_default'
-  }
+  return DEFAULT_TABS
 }
 
 function saveTabs(tabs: Tab[], activeTabId: string) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ tabs, activeTabId }))
+    localStorage.setItem(getStorageKey(), JSON.stringify({ tabs, activeTabId }))
   } catch {}
 }
 
@@ -105,7 +109,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     saveTabs(tabs, activeTabId)
   }, [tabs, activeTabId])
 
-  // Sync route changes to active tab (when user navigates via sidebar/links)
+  // Sync route changes to active tab
   useEffect(() => {
     if (isNavigatingFromTab) {
       setIsNavigatingFromTab(false)
@@ -116,14 +120,22 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       if (tab.id !== activeTabId) return tab
       if (tab.route === pathname) return tab
 
-      // Push to history
-      const newHistory = [...tab.history.slice(0, tab.historyIndex + 1), pathname]
+      let newHistory = [...tab.history.slice(0, tab.historyIndex + 1), pathname]
+      let newIndex = newHistory.length - 1
+
+      // Trim history if too long
+      if (newHistory.length > MAX_HISTORY) {
+        const excess = newHistory.length - MAX_HISTORY
+        newHistory = newHistory.slice(excess)
+        newIndex = newHistory.length - 1
+      }
+
       return {
         ...tab,
         route: pathname,
         title: getTitleForRoute(pathname),
         history: newHistory,
-        historyIndex: newHistory.length - 1
+        historyIndex: newIndex
       }
     }))
   }, [pathname, activeTabId])
@@ -153,12 +165,11 @@ export function TabsProvider({ children }: { children: ReactNode }) {
 
   const closeTab = useCallback((id: string) => {
     setTabs(prev => {
-      if (prev.length <= 1) return prev // minimum 1 tab
+      if (prev.length <= 1) return prev
 
       const index = prev.findIndex(t => t.id === id)
       const newTabs = prev.filter(t => t.id !== id)
 
-      // If closing active tab, switch to adjacent
       if (id === activeTabId) {
         const newIndex = Math.min(index, newTabs.length - 1)
         const newActive = newTabs[newIndex]
@@ -174,17 +185,26 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const navigateInTab = useCallback((route: string) => {
     setTabs(prev => prev.map(tab => {
       if (tab.id !== activeTabId) return tab
-      const newHistory = [...tab.history.slice(0, tab.historyIndex + 1), route]
+
+      let newHistory = [...tab.history.slice(0, tab.historyIndex + 1), route]
+      let newIndex = newHistory.length - 1
+
+      if (newHistory.length > MAX_HISTORY) {
+        const excess = newHistory.length - MAX_HISTORY
+        newHistory = newHistory.slice(excess)
+        newIndex = newHistory.length - 1
+      }
+
       return {
         ...tab,
         route,
         title: getTitleForRoute(route),
         history: newHistory,
-        historyIndex: newHistory.length - 1
+        historyIndex: newIndex
       }
     }))
     setIsNavigatingFromTab(true)
-    router.push(route)
+    setTimeout(() => router.push(route), 0)
   }, [activeTabId, router])
 
   const activeTab = tabs.find(t => t.id === activeTabId)
@@ -199,12 +219,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       const route = tab.history[newIndex]
       setIsNavigatingFromTab(true)
       setTimeout(() => router.push(route), 0)
-      return {
-        ...tab,
-        route,
-        title: getTitleForRoute(route),
-        historyIndex: newIndex
-      }
+      return { ...tab, route, title: getTitleForRoute(route), historyIndex: newIndex }
     }))
   }, [canGoBack, activeTabId, router])
 
@@ -216,27 +231,21 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       const route = tab.history[newIndex]
       setIsNavigatingFromTab(true)
       setTimeout(() => router.push(route), 0)
-      return {
-        ...tab,
-        route,
-        title: getTitleForRoute(route),
-        historyIndex: newIndex
-      }
+      return { ...tab, route, title: getTitleForRoute(route), historyIndex: newIndex }
     }))
   }, [canGoForward, activeTabId, router])
 
+  const resetTabs = useCallback(() => {
+    setTabs(DEFAULT_TABS.tabs)
+    setActiveTabId(DEFAULT_TABS.activeTabId)
+    setIsNavigatingFromTab(true)
+    setTimeout(() => router.push('/dashboard'), 0)
+  }, [router])
+
   return (
     <TabsContext.Provider value={{
-      tabs,
-      activeTabId,
-      setActiveTab,
-      addTab,
-      closeTab,
-      navigateInTab,
-      goBack,
-      goForward,
-      canGoBack,
-      canGoForward
+      tabs, activeTabId, setActiveTab, addTab, closeTab,
+      navigateInTab, goBack, goForward, canGoBack, canGoForward, resetTabs
     }}>
       {children}
     </TabsContext.Provider>

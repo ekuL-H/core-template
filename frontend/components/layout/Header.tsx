@@ -53,6 +53,18 @@ export default function Header({ sidebarExpanded }: HeaderProps) {
                     onClick={() => {
                       setWorkspace({ id: ws.id, type: ws.type, name: ws.name })
                       setShowWorkspaceDropdown(false)
+                      // Load the target workspace's saved tabs to find the active route
+                      try {
+                        const saved = localStorage.getItem(`browser_tabs_${ws.id}`)
+                        if (saved) {
+                          const parsed = JSON.parse(saved)
+                          const activeTab = parsed.tabs?.find((t: any) => t.id === parsed.activeTabId)
+                          if (activeTab?.route) {
+                            window.location.href = activeTab.route
+                            return
+                          }
+                        }
+                      } catch {}
                       window.location.href = '/dashboard'
                     }}
                     className={`w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors ${
