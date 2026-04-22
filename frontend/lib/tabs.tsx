@@ -2,7 +2,25 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { moduleConfig } from '@/config'
+import { tradingConfig } from '@/config/modules/trading.config'
+import { housingConfig } from '@/config/modules/housing.config'
+
+const MODULE_CONFIGS: Record<string, any> = {
+  trading: tradingConfig,
+  housing: housingConfig,
+}
+
+function getModuleConfig(): any {
+  if (typeof window === 'undefined') return tradingConfig
+  try {
+    const ws = localStorage.getItem('activeWorkspace')
+    if (ws) {
+      const parsed = JSON.parse(ws)
+      if (parsed.type && MODULE_CONFIGS[parsed.type]) return MODULE_CONFIGS[parsed.type]
+    }
+  } catch {}
+  return tradingConfig
+}
 
 interface Tab {
   id: string
@@ -39,10 +57,12 @@ function generateId() {
 }
 
 function getTitleForRoute(route: string): string {
-  const sidebarItem = moduleConfig.sidebar.find((item: any) => item.href === route)
+  const config = getModuleConfig()
+  
+  const sidebarItem = config.sidebar.find((item: any) => item.href === route)
   if (sidebarItem) return sidebarItem.label
 
-  const parentItem = moduleConfig.sidebar.find((item: any) =>
+  const parentItem = config.sidebar.find((item: any) =>
     route.startsWith(item.href + '/')
   )
   if (parentItem) {

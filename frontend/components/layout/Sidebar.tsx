@@ -4,9 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Moon, Sun, LogOut } from 'lucide-react'
-import { moduleConfig } from '@/config'
-import { logout } from '@/lib/auth'
 import { useWorkspace } from '@/lib/workspace'
+import { logout } from '@/lib/auth'
 
 interface SidebarProps {
   expanded: boolean
@@ -16,6 +15,7 @@ interface SidebarProps {
 export default function Sidebar({ expanded, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const { moduleConfig } = useWorkspace()
   const [darkMode, setDarkMode] = useState(false)
 
   useEffect(() => {
@@ -35,8 +35,6 @@ export default function Sidebar({ expanded, onToggle }: SidebarProps) {
   const handleLogout = () => {
     logout()
     router.push('/auth')
-
-  const { workspace } = useWorkspace()
   }
 
   return (
@@ -60,7 +58,6 @@ export default function Sidebar({ expanded, onToggle }: SidebarProps) {
           </button>
         </div>
 
-        {/* Quick access / widget area */}
         <div className="px-2 pb-2">
           <div className="rounded-md border border-sidebar-border bg-sidebar-accent/50 h-40">
             {expanded ? (
@@ -85,7 +82,7 @@ export default function Sidebar({ expanded, onToggle }: SidebarProps) {
         </div>
       </div>
 
-      {/* Nav Items - centered in remaining space */}
+      {/* Nav Items */}
       <nav className="flex flex-col gap-1 p-2 flex-1 min-h-0 overflow-y-auto justify-center">
         {moduleConfig.sidebar.map((item: any) => {
           const Icon = item.icon
@@ -113,30 +110,19 @@ export default function Sidebar({ expanded, onToggle }: SidebarProps) {
       {/* Bottom: dark mode + logout */}
       <div className="flex-shrink-0 border-t border-sidebar-border p-2">
         <div className={`flex ${expanded ? 'flex-col gap-1' : 'flex-col items-center gap-1'}`}>
-          {/* Dark mode toggle */}
           <button
             onClick={toggleDarkMode}
             className="flex items-center gap-3 px-2 py-2 rounded-md transition-colors text-[13px] text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
-            {darkMode ? (
-              <Sun className="w-4 h-4 flex-shrink-0" />
-            ) : (
-              <Moon className="w-4 h-4 flex-shrink-0" />
-            )}
-            {expanded && (
-              <span className="truncate">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
-            )}
+            {darkMode ? <Sun className="w-4 h-4 flex-shrink-0" /> : <Moon className="w-4 h-4 flex-shrink-0" />}
+            {expanded && <span className="truncate">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>}
           </button>
-
-          {/* Logout */}
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-2 py-2 rounded-md transition-colors text-[13px] text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
             <LogOut className="w-4 h-4 flex-shrink-0" />
-            {expanded && (
-              <span className="truncate">Logout</span>
-            )}
+            {expanded && <span className="truncate">Logout</span>}
           </button>
         </div>
       </div>

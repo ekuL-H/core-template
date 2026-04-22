@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
-import { moduleConfig } from '@/config'
+import { useWorkspace } from '@/lib/workspace'
 
 interface BreadcrumbOverride {
   label: string
@@ -16,24 +16,24 @@ interface BreadcrumbProps {
 
 export default function Breadcrumb({ overrides }: BreadcrumbProps) {
   const pathname = usePathname()
+  const { moduleConfig } = useWorkspace()
 
   const buildCrumbs = (): { label: string; href?: string }[] => {
-    // First crumb is always the workspace name
     const crumbs: { label: string; href?: string }[] = [
       { label: moduleConfig.name, href: '/dashboard' }
     ]
 
-    // If overrides are provided, use them (for detail pages like /watchlist/[id])
     if (overrides) {
       return [...crumbs, ...overrides]
     }
 
-    // Otherwise, derive from pathname
     const segments = pathname.split('/').filter(Boolean)
-    
-    segments.forEach((segment, i) => {
-      const href = '/' + segments.slice(0, i + 1).join('/')
-      // Match against sidebar config for a clean label
+
+    // Skip 'trading' or 'housing' segment in breadcrumb display
+    const displaySegments = segments.filter(s => s !== moduleConfig.module)
+
+    displaySegments.forEach((segment, i) => {
+      const href = '/' + segments.slice(0, segments.indexOf(segment) + 1).join('/')
       const sidebarItem = moduleConfig.sidebar.find(
         (item: any) => item.href === href
       )
@@ -56,16 +56,14 @@ export default function Breadcrumb({ overrides }: BreadcrumbProps) {
         return (
           <div key={i} className="flex items-center gap-1.5">
             {i > 0 && (
-              <ChevronRight className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
+              <ChevronRight className="w-3 h-3 text-muted-foreground" />
             )}
             {isLast || !crumb.href ? (
-              <span className="text-zinc-900 dark:text-white font-medium">
-                {crumb.label}
-              </span>
+              <span className="text-foreground font-medium">{crumb.label}</span>
             ) : (
               <Link
                 href={crumb.href}
-                className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 {crumb.label}
               </Link>

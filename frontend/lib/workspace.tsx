@@ -2,6 +2,13 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { tradingConfig } from '@/config/modules/trading.config'
+import { housingConfig } from '@/config/modules/housing.config'
+
+const MODULE_CONFIGS: Record<string, any> = {
+  trading: tradingConfig,
+  housing: housingConfig,
+}
 
 interface ActiveWorkspace {
   id: string
@@ -11,6 +18,7 @@ interface ActiveWorkspace {
 
 interface WorkspaceContextType {
   workspace: ActiveWorkspace | null
+  moduleConfig: any
   setWorkspace: (ws: ActiveWorkspace) => void
   clearWorkspace: () => void
 }
@@ -55,11 +63,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     router.push('/workspaces')
   }
 
+  const moduleConfig = workspace ? (MODULE_CONFIGS[workspace.type] || tradingConfig) : tradingConfig
+
   if (!loaded) return null
   if (!workspace) return null
 
   return (
-    <WorkspaceContext.Provider value={{ workspace, setWorkspace, clearWorkspace }}>
+    <WorkspaceContext.Provider value={{ workspace, moduleConfig, setWorkspace, clearWorkspace }}>
       {children}
     </WorkspaceContext.Provider>
   )
