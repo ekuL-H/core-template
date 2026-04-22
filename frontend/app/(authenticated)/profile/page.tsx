@@ -5,12 +5,13 @@ import { tradingApi as api } from '@/lib/api/trading'
 import { BrokerConnection } from '@/lib/types/trading'
 import AppShell from '@/components/layout/AppShell'
 import { Plus, Trash2, Wifi, WifiOff } from 'lucide-react'
+import { useWorkspace } from '@/lib/workspace'
 
 type Tab = 'account' | 'brokers' | 'preferences'
 
-const TABS: { key: Tab; label: string }[] = [
+const ALL_TABS: { key: Tab; label: string; modules?: string[] }[] = [
   { key: 'account', label: 'Account' },
-  { key: 'brokers', label: 'Brokers' },
+  { key: 'brokers', label: 'Brokers', modules: ['trading'] },
   { key: 'preferences', label: 'Preferences' },
 ]
 
@@ -23,6 +24,9 @@ const BROKER_PRESETS = [
 ]
 
 export default function ProfilePage() {
+  const { workspace } = useWorkspace()
+  const tabs = ALL_TABS.filter(t => !t.modules || t.modules.includes(workspace?.type || ''))
+
   const [activeTab, setActiveTab] = useState<Tab>('account')
   const [connections, setConnections] = useState<BrokerConnection[]>([])
   const [loadingBrokers, setLoadingBrokers] = useState(false)
@@ -74,10 +78,9 @@ export default function ProfilePage() {
       <div className="max-w-2xl">
         <h1 className="text-lg font-semibold text-foreground mb-4">Profile</h1>
 
-        {/* Tabs */}
         <div className="border-b border-border mb-6">
           <div className="flex gap-0">
-            {TABS.map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
@@ -94,7 +97,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Account tab */}
         {activeTab === 'account' && (
           <div>
             <div className="space-y-4">
@@ -114,13 +116,10 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Brokers tab */}
         {activeTab === 'brokers' && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <p className="text-xs text-muted-foreground">
-                Connect your trading accounts to stream live data
-              </p>
+              <p className="text-xs text-muted-foreground">Connect your trading accounts to stream live data</p>
               <button
                 onClick={() => setShowAddBroker(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
@@ -130,18 +129,13 @@ export default function ProfilePage() {
               </button>
             </div>
 
-            {loadingBrokers && (
-              <p className="text-xs text-muted-foreground">Loading...</p>
-            )}
+            {loadingBrokers && <p className="text-xs text-muted-foreground">Loading...</p>}
 
             {!loadingBrokers && connections.length === 0 && (
               <div className="text-center py-12 border border-dashed border-border rounded-lg">
                 <WifiOff className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground mb-2">No brokers connected</p>
-                <button
-                  onClick={() => setShowAddBroker(true)}
-                  className="text-xs text-primary hover:text-primary/80 font-medium"
-                >
+                <button onClick={() => setShowAddBroker(true)} className="text-xs text-primary hover:text-primary/80 font-medium">
                   Connect your first broker
                 </button>
               </div>
@@ -149,19 +143,10 @@ export default function ProfilePage() {
 
             <div className="space-y-2">
               {connections.map((conn) => (
-                <div
-                  key={conn.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border bg-card"
-                >
+                <div key={conn.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-md ${
-                      conn.status === 'connected' ? 'bg-success/10' : 'bg-muted'
-                    }`}>
-                      {conn.status === 'connected' ? (
-                        <Wifi className="w-4 h-4 text-success" />
-                      ) : (
-                        <WifiOff className="w-4 h-4 text-muted-foreground" />
-                      )}
+                    <div className={`p-1.5 rounded-md ${conn.status === 'connected' ? 'bg-success/10' : 'bg-muted'}`}>
+                      {conn.status === 'connected' ? <Wifi className="w-4 h-4 text-success" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-card-foreground">{conn.brokerName}</p>
@@ -173,16 +158,11 @@ export default function ProfilePage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                      conn.status === 'connected'
-                        ? 'bg-success/10 text-success'
-                        : 'bg-muted text-muted-foreground'
+                      conn.status === 'connected' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
                     }`}>
                       {conn.status}
                     </span>
-                    <button
-                      onClick={() => handleDeleteBroker(conn.id)}
-                      className="p-1 rounded hover:bg-destructive/10"
-                    >
+                    <button onClick={() => handleDeleteBroker(conn.id)} className="p-1 rounded hover:bg-destructive/10">
                       <Trash2 className="w-3.5 h-3.5 text-destructive" />
                     </button>
                   </div>
@@ -190,12 +170,10 @@ export default function ProfilePage() {
               ))}
             </div>
 
-            {/* Add Broker Modal */}
             {showAddBroker && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                 <div className="bg-popover rounded-lg border border-border p-6 w-full max-w-sm mx-4">
                   <h2 className="text-sm font-semibold text-popover-foreground mb-4">Add Broker Connection</h2>
-
                   <div className="mb-4">
                     <label className="text-xs text-muted-foreground mb-1 block">Broker</label>
                     <div className="flex flex-wrap gap-1.5">
@@ -214,42 +192,23 @@ export default function ProfilePage() {
                       ))}
                     </div>
                   </div>
-
                   <div className="mb-4">
                     <label className="text-xs text-muted-foreground mb-1 block">Account Number</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 12345678"
-                      value={accountNumber}
+                    <input type="text" placeholder="e.g. 12345678" value={accountNumber}
                       onChange={(e) => setAccountNumber(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-md border border-input bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
+                      className="w-full px-3 py-2 text-sm rounded-md border border-input bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
                   </div>
-
                   <div className="mb-4">
                     <label className="text-xs text-muted-foreground mb-1 block">Server Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. ICMarketsSC-Demo"
-                      value={serverName}
+                    <input type="text" placeholder="e.g. ICMarketsSC-Demo" value={serverName}
                       onChange={(e) => setServerName(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-md border border-input bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
+                      className="w-full px-3 py-2 text-sm rounded-md border border-input bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
                   </div>
-
                   <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => { setShowAddBroker(false); setAccountNumber(''); setServerName('') }}
-                      className="px-3 py-1.5 text-xs rounded-md text-muted-foreground hover:bg-accent"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleAddBroker}
-                      className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
-                    >
-                      Connect
-                    </button>
+                    <button onClick={() => { setShowAddBroker(false); setAccountNumber(''); setServerName('') }}
+                      className="px-3 py-1.5 text-xs rounded-md text-muted-foreground hover:bg-accent">Cancel</button>
+                    <button onClick={handleAddBroker}
+                      className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90">Connect</button>
                   </div>
                 </div>
               </div>
@@ -257,7 +216,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Preferences tab */}
         {activeTab === 'preferences' && (
           <div className="text-sm text-muted-foreground">
             Preferences coming soon — default timezone, timeframe, theme, etc.

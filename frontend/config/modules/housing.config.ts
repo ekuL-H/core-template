@@ -5,6 +5,7 @@ import {
   Wrench,
   CreditCard,
   FileText,
+  User,
   Settings
 } from 'lucide-react'
 
@@ -18,6 +19,7 @@ export const housingConfig = {
     { label: 'Maintenance', href: '/housing/maintenance', icon: Wrench },
     { label: 'Payments', href: '/housing/payments', icon: CreditCard },
     { label: 'Documents', href: '/housing/documents', icon: FileText },
+    { label: 'Profile', href: '/profile', icon: User },
     { label: 'Settings', href: '/settings', icon: Settings },
   ]
 }
