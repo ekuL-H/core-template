@@ -1,5 +1,19 @@
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
-  redirect('/dashboard')
+  const router = useRouter()
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      router.push('/workspaces')
+    } else {
+      router.push('/auth')
+    }
+  }, [])
+
+  return null
 }

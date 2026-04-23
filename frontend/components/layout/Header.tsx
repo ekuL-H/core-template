@@ -30,7 +30,7 @@ export default function Header({ sidebarExpanded }: HeaderProps) {
           className="w-14 flex items-center justify-center flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
         >
           <div className="w-6 h-6 rounded-md bg-foreground flex items-center justify-center">
-            <span className="text-[8px] font-bold text-background tracking-tight">T-AI</span>
+            <span className="text-[7px] font-bold text-background tracking-tight">Oasis</span>
           </div>
         </div>
 
