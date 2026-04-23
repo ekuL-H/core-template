@@ -6,6 +6,7 @@ import { coreApi } from '@/lib/api/core'
 import { Plus, ArrowRight, Trash2, LayoutDashboard, Home, Archive, Clock, Settings, LogOut, RotateCcw } from 'lucide-react'
 import { logout } from '@/lib/auth'
 
+
 const TYPE_ICONS: Record<string, any> = {
   trading: LayoutDashboard,
   housing: Home,
@@ -54,6 +55,19 @@ export default function WorkspacesPage() {
 
   useEffect(() => {
     if (authed) fetchData()
+  }, [authed])
+
+  // Refetch when page regains focus (e.g. browser back button)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (authed) fetchData()
+    }
+    window.addEventListener('focus', handleFocus)
+    window.addEventListener('popstate', handleFocus)
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      window.removeEventListener('popstate', handleFocus)
+    }
   }, [authed])
 
   // Apply saved theme
@@ -199,7 +213,14 @@ export default function WorkspacesPage() {
             ))}
           </nav>
 
-          <div className="border-t border-border pt-3 mt-3">
+          <div className="border-t border-border pt-3 mt-3 flex flex-col gap-0.5">
+            <button
+              onClick={() => router.push('/profile')}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors w-full"
+            >
+              <Settings className="w-4 h-4" />
+              <span>Settings</span>
+            </button>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors w-full"
@@ -212,7 +233,7 @@ export default function WorkspacesPage() {
 
         {/* Main content */}
         <div className="flex-1 p-8 overflow-y-auto">
-          <div className="max-w-3xl">
+          <div className="w-full">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
