@@ -27,9 +27,12 @@ export default function AuthPage() {
     setLoading(true)
     try {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'
-      const res = await axios.post(`http://localhost:5000${endpoint}`, { email, password })
+      const payload = isLogin ? { email, password } : { email, password, name: name.trim() || undefined }
+      const res = await axios.post(`http://localhost:5000${endpoint}`, payload)
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('userId', res.data.userId)
+      if (res.data.email) localStorage.setItem('userEmail', res.data.email)
+      if (res.data.name) localStorage.setItem('userName', res.data.name)
       window.location.href = '/workspaces'
     } catch (err: any) {
       setError(err.response?.data?.error || 'Something went wrong')

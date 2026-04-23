@@ -3,6 +3,21 @@ import { axios, BASE_URL, getHeaders } from './client'
 export const coreApi = {
   // Auth is handled in lib/auth.ts
 
+  getMe: async () => {
+    const res = await axios.get(`${BASE_URL}/api/auth/me`, { headers: getHeaders() })
+    return res.data
+  },
+
+  updateMe: async (data: { name?: string; email?: string }) => {
+    const res = await axios.put(`${BASE_URL}/api/auth/me`, data, { headers: getHeaders() })
+    return res.data
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    const res = await axios.put(`${BASE_URL}/api/auth/me/password`, { currentPassword, newPassword }, { headers: getHeaders() })
+    return res.data
+  },
+
   // Workspaces
   getWorkspaces: async () => {
     const res = await axios.get(`${BASE_URL}/api/workspace`, { headers: getHeaders() })
@@ -38,4 +53,5 @@ export const coreApi = {
     const res = await axios.post(`${BASE_URL}/api/workspace/${id}/restore`, {}, { headers: getHeaders() })
     return res.data
   },
+  
 }

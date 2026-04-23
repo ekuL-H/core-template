@@ -25,8 +25,9 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
 
     const hashed = await bcrypt.hash(password, 10)
 
+    const { name } = req.body
     const user = await prisma.user.create({
-      data: { email, password: hashed }
+      data: { email, password: hashed, name: name || null }
     })
 
     const token = jwt.sign(
@@ -35,7 +36,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
       { expiresIn: '7d' }
     )
 
-    res.status(201).json({ token, userId: user.id })
+    res.status(201).json({ token, userId: user.id, email: user.email, name: user.name })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
   }
@@ -64,9 +65,87 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
       { expiresIn: '7d' }
     )
 
-    res.json({ token, userId: user.id })
+    res.json({ token, userId: user.id, email: user.email, name: user.name })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// Get current user
+router.get('/me', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader?.startsWith('Bearer ')) { res.status(401).json({ error: 'Unauthorised' }); return }
+    
+    const token = authHeader.split(' ')[1]
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string }
+    
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, email: true, name: true, createdAt: true }
+    })
+    if (!user) { res.status(404).json({ error: 'User not found' }); return }
+    
+    res.json(user)
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' })
+  }
+})
+
+// Update profile
+router.put('/me', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader?.startsWith('Bearer ')) { res.status(401).json({ error: 'Unauthorised' }); return }
+    
+    const token = authHeader.split(' ')[1]
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string }
+    
+    const { name, email } = req.body
+    const user = await prisma.user.update({
+      where: { id: decoded.userId },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(email && { email }),
+      },
+      select: { id: true, email: true, name: true, createdAt: true }
+    })
+    
+    res.json(user)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update profile' })
+  }
+})
+
+// Change password
+router.put('/me/password', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader?.startsWith('Bearer ')) { res.status(401).json({ error: 'Unauthorised' }); return }
+    
+    const token = authHeader.split(' ')[1]
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string }
+    
+    const { currentPassword, newPassword } = req.body
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ error: 'Current and new password required' }); return
+    }
+    if (newPassword.length < 6) {
+      res.status(400).json({ error: 'Password must be at least 6 characters' }); return
+    }
+    
+    const user = await prisma.user.findUnique({ where: { id: decoded.userId } })
+    if (!user) { res.status(404).json({ error: 'User not found' }); return }
+    
+    const valid = await bcrypt.compare(currentPassword, user.password)
+    if (!valid) { res.status(400).json({ error: 'Current password is incorrect' }); return }
+    
+    const hashed = await bcrypt.hash(newPassword, 10)
+    await prisma.user.update({ where: { id: decoded.userId }, data: { password: hashed } })
+    
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to change password' })
   }
 })
 
