@@ -6,6 +6,7 @@ import { coreApi } from '@/lib/api/core'
 import { Plus, ArrowRight, Trash2, LayoutDashboard, Home, Archive, Clock, Settings as SettingsIcon, LogOut, RotateCcw, Search, Bell, Calendar, HelpCircle, User, Sun, Moon, MoreHorizontal, Pencil } from 'lucide-react'
 import { logout } from '@/lib/auth'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import SettingsModal from '@/components/layout/SettingsModal'
 
 
 const TYPE_ICONS: Record<string, any> = {
@@ -51,6 +52,7 @@ export default function WorkspacesPage() {
   const [cardMenu, setCardMenu] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [showSettings, setShowSettings] = useState<'account' | 'appearance' | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -270,14 +272,14 @@ export default function WorkspacesPage() {
 
           <div className="border-t border-sidebar-border pt-3 mt-3 flex flex-col gap-0.5">
             <button
-              onClick={() => router.push('/profile')}
+              onClick={() => setShowSettings('account')}
               className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors w-full"
             >
               <User className="w-4 h-4" />
               <span>Profile</span>
             </button>
             <button
-              onClick={() => router.push('/settings')}
+              onClick={() => setShowSettings('appearance')}
               className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors w-full"
             >
               <SettingsIcon className="w-4 h-4" />
@@ -532,7 +534,7 @@ export default function WorkspacesPage() {
           </div>
         </div>
       </div>
-      {confirmAction && (
+        {confirmAction && (
           <ConfirmDialog
             title={confirmAction.type === 'archive' ? 'Archive Workspace' : 'Delete Workspace'}
             message={confirmAction.type === 'archive'
@@ -542,6 +544,12 @@ export default function WorkspacesPage() {
             confirmDestructive={true}
             onConfirm={executeAction}
             onCancel={() => setConfirmAction(null)}
+          />
+        )}
+        {showSettings && (
+          <SettingsModal
+            onClose={() => setShowSettings(null)}
+            initialSection={showSettings}
           />
         )}
     </div>

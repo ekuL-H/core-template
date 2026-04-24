@@ -27,7 +27,14 @@ const WorkspaceContext = createContext<WorkspaceContextType | null>(null)
 
 export function useWorkspace() {
   const ctx = useContext(WorkspaceContext)
-  if (!ctx) throw new Error('useWorkspace must be used within WorkspaceProvider')
+  if (!ctx) {
+    return {
+      workspace: null,
+      moduleConfig: null,
+      setWorkspace: () => {},
+      clearWorkspace: () => {},
+    } as any
+  }
   return ctx
 }
 
