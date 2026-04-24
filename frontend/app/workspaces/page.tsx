@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { coreApi } from '@/lib/api/core'
-import { Plus, ArrowRight, Trash2, LayoutDashboard, Home, Archive, Clock, Settings, LogOut, RotateCcw } from 'lucide-react'
+import { Plus, ArrowRight, Trash2, LayoutDashboard, Home, Archive, Clock, Settings as SettingsIcon, LogOut, RotateCcw, Search, Bell, Calendar, HelpCircle, User, Sun, Moon } from 'lucide-react'
 import { logout } from '@/lib/auth'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
@@ -79,6 +79,21 @@ export default function WorkspacesPage() {
     document.documentElement.classList.toggle('dark', isDark)
   }, [])
 
+  const [darkMode, setDarkMode] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('theme')
+    const isDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    setDarkMode(isDark)
+  }, [])
+
+  const toggleDarkMode = () => {
+    const next = !darkMode
+    setDarkMode(next)
+    document.documentElement.classList.toggle('dark', next)
+    localStorage.setItem('theme', next ? 'dark' : 'light')
+  }
+  
   const fetchData = async () => {
     try {
       const [ws, tmpl] = await Promise.all([
@@ -188,25 +203,33 @@ export default function WorkspacesPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-6 h-14 border-b border-border flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center">
-            <span className="text-[9px] font-bold text-background tracking-tight">Oasis</span>
+      {/* Top bar - matches app header height */}
+      <div className="flex items-center justify-between px-4 h-11 border-b border-sidebar-border bg-sidebar flex-shrink-0">
+        <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => router.push('/')}>
+          <div className="w-6 h-6 rounded-md bg-foreground flex items-center justify-center">
+            <span className="text-[7px] font-bold text-background tracking-tight">Oasis</span>
           </div>
-          <span className="text-sm font-semibold text-foreground">Oasis</span>
+          <span className="text-[13px] font-semibold text-foreground">Oasis</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center cursor-pointer hover:bg-accent transition-colors"
-            onClick={handleLogout} title="Logout">
-            <LogOut className="w-3.5 h-3.5 text-muted-foreground" />
-          </div>
+        <div className="flex items-center gap-0.5">
+          <button className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors" title="Search">
+            <Search className="w-3.5 h-3.5" />
+          </button>
+          <button className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors" title="Notifications">
+            <Bell className="w-3.5 h-3.5" />
+          </button>
+          <button className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors" title="Calendar">
+            <Calendar className="w-3.5 h-3.5" />
+          </button>
+          <button className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors" title="Help">
+            <HelpCircle className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
       <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
-        <div className="w-52 border-r border-border p-4 flex flex-col flex-shrink-0">
+        <div className="w-52 border-r border-sidebar-border bg-sidebar p-4 flex flex-col flex-shrink-0">
           <nav className="flex flex-col gap-0.5 flex-1">
             {SIDEBAR_ITEMS.map(item => (
               <button
@@ -214,8 +237,8 @@ export default function WorkspacesPage() {
                 onClick={() => setFilter(item.key)}
                 className={`flex items-center justify-between px-3 py-2 rounded-md text-[13px] transition-colors ${
                   filter === item.key
-                    ? 'bg-accent text-foreground font-medium'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    ? 'bg-sidebar-accent text-foreground font-medium'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
@@ -229,23 +252,39 @@ export default function WorkspacesPage() {
             ))}
           </nav>
 
-          <div className="border-t border-border pt-3 mt-3 flex flex-col gap-0.5">
+          <div className="border-t border-sidebar-border pt-3 mt-3 flex flex-col gap-0.5">
             <button
               onClick={() => router.push('/profile')}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors w-full"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors w-full"
             >
-              <Settings className="w-4 h-4" />
+              <User className="w-4 h-4" />
+              <span>Profile</span>
+            </button>
+            <button
+              onClick={() => router.push('/settings')}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors w-full"
+            >
+              <SettingsIcon className="w-4 h-4" />
               <span>Settings</span>
             </button>
             <button
+              onClick={toggleDarkMode}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors w-full"
+            >
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+            </button>
+            <button
               onClick={handleLogout}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors w-full"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors w-full"
             >
               <LogOut className="w-4 h-4" />
               <span>Logout</span>
             </button>
           </div>
         </div>
+
+        {/* Main content */}
 
         {/* Main content */}
         <div className="flex-1 p-8 overflow-y-auto">

@@ -58,7 +58,7 @@ export default function AuthPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-foreground flex items-center justify-center mb-4">
+          <div className="w-12 h-12 rounded-xl bg-foreground flex items-center justify-center mb-4 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => window.location.href = '/'}>
             <span className="text-sm font-bold text-background tracking-tight">Oasis</span>
           </div>
           <h1 className="text-xl font-semibold text-foreground">
