@@ -24,6 +24,14 @@ export default function AuthPage() {
       setError('Email and password are required')
       return
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Please enter a valid email address')
+      return
+    }
+    if (!isLogin && password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
     setLoading(true)
     try {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'

@@ -12,7 +12,17 @@ export default function AuthenticatedLayout({
 }: {
   children: React.ReactNode
 }) {
-  const [expanded, setExpanded] = useState(true)
+  const [expanded, setExpanded] = useState(() => {
+    if (typeof window === 'undefined') return true
+    const saved = localStorage.getItem('sidebar_expanded')
+    return saved !== null ? saved === 'true' : true
+  })
+
+  const handleToggle = () => {
+    const next = !expanded
+    setExpanded(next)
+    localStorage.setItem('sidebar_expanded', String(next))
+  }
 
   return (
     <AuthProvider>
@@ -20,7 +30,7 @@ export default function AuthenticatedLayout({
         <TabsProvider>
         <div className="h-screen overflow-hidden bg-background">
           <Header sidebarExpanded={expanded} />
-          <Sidebar expanded={expanded} onToggle={() => setExpanded(!expanded)} />
+          <Sidebar expanded={expanded} onToggle={handleToggle} />
           <main
             className={`transition-all duration-300 pt-11 h-full ${
               expanded ? 'ml-56' : 'ml-14'

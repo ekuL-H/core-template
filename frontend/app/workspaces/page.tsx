@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { coreApi } from '@/lib/api/core'
 import { Plus, ArrowRight, Trash2, LayoutDashboard, Home, Archive, Clock, Settings, LogOut, RotateCcw } from 'lucide-react'
 import { logout } from '@/lib/auth'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 
 const TYPE_ICONS: Record<string, any> = {
@@ -46,6 +47,7 @@ export default function WorkspacesPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
   const [selectedType, setSelectedType] = useState('')
+  const [confirmAction, setConfirmAction] = useState<{ type: 'archive' | 'delete'; id: string } | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -120,20 +122,34 @@ export default function WorkspacesPage() {
 
   const handleArchive = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    try { await coreApi.archiveWorkspace(id); fetchData() }
-    catch (err) { console.error('Failed to archive workspace', err) }
+    setConfirmAction({ type: 'archive', id })
+  }
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setConfirmAction({ type: 'delete', id })
+  }
+
+  const executeAction = async () => {
+    if (!confirmAction) return
+    try {
+      if (confirmAction.type === 'archive') {
+        await coreApi.archiveWorkspace(confirmAction.id)
+      } else {
+        await coreApi.deleteWorkspace(confirmAction.id)
+      }
+      fetchData()
+    } catch (err) {
+      console.error('Action failed', err)
+    } finally {
+      setConfirmAction(null)
+    }
   }
 
   const handleRestore = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
     try { await coreApi.restoreWorkspace(id); fetchData() }
     catch (err) { console.error('Failed to restore workspace', err) }
-  }
-
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    try { await coreApi.deleteWorkspace(id); fetchData() }
-    catch (err) { console.error('Failed to delete workspace', err) }
   }
 
   const handleLogout = () => {
@@ -414,6 +430,18 @@ export default function WorkspacesPage() {
           </div>
         </div>
       </div>
+      {confirmAction && (
+          <ConfirmDialog
+            title={confirmAction.type === 'archive' ? 'Archive Workspace' : 'Delete Workspace'}
+            message={confirmAction.type === 'archive'
+              ? 'This workspace will be archived and automatically deleted after 30 days. You can restore it anytime before then.'
+              : 'This will permanently delete the workspace and all its data. This cannot be undone.'}
+            confirmLabel={confirmAction.type === 'archive' ? 'Archive' : 'Delete Permanently'}
+            confirmDestructive={true}
+            onConfirm={executeAction}
+            onCancel={() => setConfirmAction(null)}
+          />
+        )}
     </div>
   )
 }

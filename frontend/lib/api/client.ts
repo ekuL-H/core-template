@@ -18,4 +18,21 @@ export const getHeaders = () => {
   return headers
 }
 
+// Auto-redirect to login on 401 (expired/invalid token)
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      if (!window.location.pathname.startsWith('/auth')) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('userId')
+        localStorage.removeItem('userEmail')
+        localStorage.removeItem('userName')
+        window.location.href = '/auth'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 export { axios }

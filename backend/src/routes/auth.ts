@@ -17,7 +17,12 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body
 
-    const existing = await prisma.user.findUnique({ where: { email } })
+    if (!email || !password) { res.status(400).json({ error: 'Email and password are required' }); return }
+    const cleanEmail = email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) { res.status(400).json({ error: 'Invalid email format' }); return }
+    if (password.length < 6) { res.status(400).json({ error: 'Password must be at least 6 characters' }); return }
+    if (password.length > 128) { res.status(400).json({ error: 'Password too long' }); return }
+    const existing = await prisma.user.findUnique({ where: { email: cleanEmail } })
     if (existing) {
       res.status(400).json({ error: 'Email already in use' })
       return
@@ -27,7 +32,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
 
     const { name } = req.body
     const user = await prisma.user.create({
-      data: { email, password: hashed, name: name || null }
+      data: { email: cleanEmail, password: hashed, name: name?.trim() || null }
     })
 
     const token = jwt.sign(
@@ -46,8 +51,10 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
 router.post('/login', authLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body
+    if (!email || !password) { res.status(400).json({ error: 'Email and password are required' }); return }
+    const cleanEmail = email.trim().toLowerCase()
 
-    const user = await prisma.user.findUnique({ where: { email } })
+    const user = await prisma.user.findUnique({ where: { email: cleanEmail } })
     if (!user) {
       res.status(400).json({ error: 'Invalid credentials' })
       return
