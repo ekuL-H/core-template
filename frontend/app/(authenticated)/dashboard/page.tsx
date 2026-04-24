@@ -4,8 +4,6 @@ import { useState, useEffect, useMemo } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import { Plus, X, Settings, LayoutDashboard } from 'lucide-react'
 import { useWorkspace } from '@/lib/workspace'
-
-// Trading widgets (only imported for trading workspaces)
 import { WidgetConfig, AVAILABLE_WIDGETS, DEFAULT_LAYOUT } from '@/components/trading/dashboard/types'
 import {
   AccountWidget,
@@ -16,10 +14,14 @@ import {
   QuickActionsWidget
 } from '@/components/trading/dashboard/widgets'
 
-// @ts-ignore
-const GridLayout = require('react-grid-layout').default || require('react-grid-layout')
+// react-grid-layout v2 — client-side only import
+let ReactGridLayout: any = null
+if (typeof window !== 'undefined') {
+  const mod = require('react-grid-layout')
+  ReactGridLayout = mod.default || mod
+}
 
-const TRADING_WIDGET_COMPONENTS: Record<string, React.ComponentType> = {
+const WIDGET_COMPONENTS: Record<string, React.ComponentType> = {
   'account': AccountWidget,
   'positions': PositionsWidget,
   'calendar': CalendarWidget,
@@ -29,7 +31,8 @@ const TRADING_WIDGET_COMPONENTS: Record<string, React.ComponentType> = {
 }
 
 const STORAGE_KEY = 'dashboard_widgets'
-const ROW_HEIGHT = 180
+const ROW_HEIGHT = 160
+const COLS = 3
 
 function getStorageKey(workspaceId?: string): string {
   return workspaceId ? `${STORAGE_KEY}_${workspaceId}` : STORAGE_KEY
@@ -56,33 +59,46 @@ export default function DashboardPage() {
   }, [widgets, workspace?.id])
 
   useEffect(() => {
-    const updateWidth = () => {
-      const el = document.getElementById('dashboard-grid')
-      if (el) setContainerWidth(el.clientWidth)
-    }
-    updateWidth()
-    window.addEventListener('resize', updateWidth)
-    return () => window.removeEventListener('resize', updateWidth)
-  }, [])
+    const el = document.getElementById('dashboard-grid')
+    if (!el) return
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) setContainerWidth(entry.contentRect.width)
+    })
+    observer.observe(el)
+    setContainerWidth(el.clientWidth)
+    return () => observer.disconnect()
+  }, [isTrading])
 
-  const layout = useMemo(() => widgets.map(w => ({
-    i: w.id,
-    x: w.x,
-    y: w.y,
-    w: w.w,
-    h: w.h,
-    minW: 1,
-    maxW: 3,
-    minH: 1,
-    maxH: 2,
-    static: !editing,
-  })), [widgets, editing])
+  const layout = useMemo(() => widgets.map(w => {
+    const def = AVAILABLE_WIDGETS.find(d => d.type === w.type)
+    const maxH = def?.maxH || 2
+    return {
+      i: w.id,
+      x: Math.min(Math.max(w.x, 0), COLS - w.w),
+      y: w.y,
+      w: Math.min(Math.max(w.w, 1), COLS),
+      h: Math.min(Math.max(w.h, 1), maxH),
+      minW: 1,
+      maxW: COLS,
+      minH: 1,
+      maxH: maxH,
+      static: !editing,
+    }
+  }), [widgets, editing])
 
   const handleLayoutChange = (newLayout: any[]) => {
     setWidgets(prev => prev.map(widget => {
       const item = newLayout.find((l: any) => l.i === widget.id)
       if (!item) return widget
-      return { ...widget, x: item.x, y: item.y, w: item.w, h: item.h }
+      const def = AVAILABLE_WIDGETS.find(d => d.type === widget.type)
+      const maxH = def?.maxH || 2
+      return {
+        ...widget,
+        x: Math.min(Math.max(Math.round(item.x), 0), COLS - Math.round(item.w)),
+        y: Math.max(Math.round(item.y), 0),
+        w: Math.min(Math.max(Math.round(item.w), 1), COLS),
+        h: Math.min(Math.max(Math.round(item.h), 1), maxH)
+      }
     }))
   }
 
@@ -105,7 +121,7 @@ export default function DashboardPage() {
     setWidgets(prev => prev.filter(w => w.id !== id))
   }
 
-  const widgetComponents = isTrading ? TRADING_WIDGET_COMPONENTS : {}
+  const widgetComponents = isTrading ? WIDGET_COMPONENTS : {}
   const availableWidgets = isTrading ? AVAILABLE_WIDGETS : []
 
   return (
@@ -136,80 +152,76 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Non-trading placeholder */}
       {!isTrading && (
         <div className="text-center py-20">
           <LayoutDashboard className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground mb-2">
-            {workspace?.name} Dashboard
-          </p>
+          <p className="text-sm text-muted-foreground mb-2">{workspace?.name} Dashboard</p>
           <p className="text-xs text-muted-foreground/60">Widgets for this workspace coming soon</p>
         </div>
       )}
 
-      {/* Trading widget grid */}
-      {isTrading && (
-        <div id="dashboard-grid">
-          {containerWidth > 0 && (
-            <GridLayout
-              className="layout"
-              layout={layout}
-              cols={3}
-              rowHeight={ROW_HEIGHT}
-              width={containerWidth}
-              margin={[12, 12]}
-              isDraggable={editing}
-              isResizable={editing}
-              onLayoutChange={handleLayoutChange}
-              draggableHandle=".widget-drag-handle"
-              resizeHandles={['se']}
-              compactType="vertical"
-              useCSSTransforms={true}
-            >
-              {widgets.map(widget => {
-                const Component = widgetComponents[widget.type]
-                if (!Component) return null
+      <div id="dashboard-grid">
+        {isTrading && containerWidth > 0 && ReactGridLayout && (
+          <ReactGridLayout
+            layout={layout}
+            gridConfig={{
+              cols: COLS,
+              rowHeight: ROW_HEIGHT,
+              margin: [12, 12] as [number, number],
+              compactType: 'vertical',
+            }}
+            dragConfig={{
+              isDraggable: editing,
+              draggableHandle: '.widget-drag-handle',
+            }}
+            resizeConfig={{
+              isResizable: editing,
+              resizeHandles: ['se'] as string[],
+            }}
+            width={containerWidth}
+            onLayoutChange={handleLayoutChange}
+            useCSSTransforms={true}
+          >
+            {widgets.map(widget => {
+              const Component = widgetComponents[widget.type]
+              if (!Component) return null
 
-                return (
-                  <div
-                    key={widget.id}
-                    className={`rounded-lg border bg-card overflow-hidden transition-shadow ${
-                      editing ? 'ring-1 ring-primary/20 border-primary/30' : 'border-border'
-                    }`}
-                  >
-                    {editing && (
-                      <div className="widget-drag-handle flex items-center justify-between px-3 py-1 bg-muted/30 cursor-grab active:cursor-grabbing border-b border-border/50">
-                        <div className="flex items-center gap-1.5">
-                          <div className="flex flex-col gap-0.5">
-                            <div className="w-4 h-0.5 rounded-full bg-muted-foreground/30" />
-                            <div className="w-4 h-0.5 rounded-full bg-muted-foreground/30" />
-                          </div>
-                          <span className="text-[9px] text-muted-foreground">
-                            {AVAILABLE_WIDGETS.find(w => w.type === widget.type)?.label}
-                          </span>
+              return (
+                <div
+                  key={widget.id}
+                  className={`rounded-lg border bg-card overflow-hidden ${
+                    editing ? 'ring-1 ring-primary/20 border-primary/30' : 'border-border'
+                  }`}
+                >
+                  {editing && (
+                    <div className="widget-drag-handle flex items-center justify-between px-3 py-1 bg-muted/30 cursor-grab active:cursor-grabbing border-b border-border/50">
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex flex-col gap-0.5">
+                          <div className="w-4 h-0.5 rounded-full bg-muted-foreground/30" />
+                          <div className="w-4 h-0.5 rounded-full bg-muted-foreground/30" />
                         </div>
-                        <button
-                          onClick={() => removeWidget(widget.id)}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          className="p-0.5 rounded hover:bg-destructive/10"
-                        >
-                          <X className="w-3 h-3 text-destructive" />
-                        </button>
+                        <span className="text-[9px] text-muted-foreground">
+                          {AVAILABLE_WIDGETS.find(w => w.type === widget.type)?.label}
+                        </span>
                       </div>
-                    )}
-                    <div className={`${editing ? 'h-[calc(100%-28px)]' : 'h-full'} p-3 overflow-hidden`}>
-                      <Component />
+                      <button
+                        onClick={() => removeWidget(widget.id)}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="p-0.5 rounded hover:bg-destructive/10"
+                      >
+                        <X className="w-3 h-3 text-destructive" />
+                      </button>
                     </div>
+                  )}
+                  <div className={`${editing ? 'h-[calc(100%-28px)]' : 'h-full'} p-3 overflow-hidden`}>
+                    <Component />
                   </div>
-                )
-              })}
-            </GridLayout>
-          )}
-        </div>
-      )}
-
-      {/* Need the div for width measurement even when not trading */}
-      {!isTrading && <div id="dashboard-grid" />}
+                </div>
+              )
+            })}
+          </ReactGridLayout>
+        )}
+      </div>
 
       {showAddWidget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">

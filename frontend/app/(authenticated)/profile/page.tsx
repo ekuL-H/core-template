@@ -149,7 +149,7 @@ export default function ProfilePage() {
 
   return (
     <AppShell>
-      <div className="max-w-2xl">
+      <div>
         <h1 className="text-lg font-semibold text-foreground mb-4">Profile</h1>
 
         <div className="border-b border-border mb-6">
