@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { coreApi } from '@/lib/api/core'
-import { Plus, ArrowRight, Trash2, LayoutDashboard, Home, Archive, Clock, Settings as SettingsIcon, LogOut, RotateCcw, Search, Bell, Calendar, HelpCircle, User, Sun, Moon } from 'lucide-react'
+import { Plus, ArrowRight, Trash2, LayoutDashboard, Home, Archive, Clock, Settings as SettingsIcon, LogOut, RotateCcw, Search, Bell, Calendar, HelpCircle, User, Sun, Moon, MoreHorizontal, Pencil } from 'lucide-react'
 import { logout } from '@/lib/auth'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
@@ -48,6 +48,9 @@ export default function WorkspacesPage() {
   const [newName, setNewName] = useState('')
   const [selectedType, setSelectedType] = useState('')
   const [confirmAction, setConfirmAction] = useState<{ type: 'archive' | 'delete'; id: string } | null>(null)
+  const [cardMenu, setCardMenu] = useState<string | null>(null)
+  const [renaming, setRenaming] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -170,6 +173,19 @@ export default function WorkspacesPage() {
   const handleLogout = () => {
     logout()
     router.push('/auth')
+  }
+
+  const handleRename = async (id: string) => {
+    if (!renameValue.trim()) { setRenaming(null); return }
+    try {
+      await coreApi.updateWorkspace(id, { name: renameValue.trim() })
+      fetchData()
+    } catch (err) {
+      console.error('Failed to rename workspace', err)
+    } finally {
+      setRenaming(null)
+      setRenameValue('')
+    }
   }
 
   const activeWorkspaces = workspaces.filter(ws => ws.status === 'active')
@@ -352,9 +368,64 @@ export default function WorkspacesPage() {
                           <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: color + '15' }}>
                             <Icon className="w-4.5 h-4.5" style={{ color }} />
                           </div>
-                          <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-muted-foreground transition-colors" />
+                          {ws.role === 'owner' && (
+                            <div className="relative">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setCardMenu(cardMenu === ws.id ? null : ws.id)
+                                }}
+                                className="p-1 rounded text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent transition-all"
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </button>
+                              {cardMenu === ws.id && (
+                                <>
+                                  <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setCardMenu(null) }} />
+                                  <div className="absolute top-full right-0 mt-1 z-20 bg-popover border border-border rounded-md shadow-lg py-1 min-w-[140px]">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setCardMenu(null)
+                                        setRenaming(ws.id)
+                                        setRenameValue(ws.name)
+                                      }}
+                                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-accent transition-colors"
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                      Rename
+                                    </button>
+                                    <button
+                                      onClick={(e) => handleArchive(ws.id, e)}
+                                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 transition-colors"
+                                    >
+                                      <Archive className="w-3 h-3" />
+                                      Archive
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <h3 className="text-sm font-medium text-card-foreground mb-0.5">{ws.name}</h3>
+                        {renaming === ws.id ? (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleRename(ws.id)
+                                if (e.key === 'Escape') { setRenaming(null); setRenameValue('') }
+                              }}
+                              onBlur={() => handleRename(ws.id)}
+                              autoFocus
+                              className="w-full px-2 py-1 text-sm font-medium rounded-md border border-input bg-transparent text-foreground focus:outline-none focus:ring-1 focus:ring-ring mb-0.5"
+                            />
+                          </div>
+                        ) : (
+                          <h3 className="text-sm font-medium text-card-foreground mb-0.5">{ws.name}</h3>
+                        )}
                         <p className="text-[11px] text-muted-foreground">
                           {ws.type.charAt(0).toUpperCase() + ws.type.slice(1)} · {ws.memberCount} {ws.memberCount === 1 ? 'member' : 'members'}
                         </p>
@@ -362,14 +433,6 @@ export default function WorkspacesPage() {
                           Created {formatDate(ws.createdAt)}
                         </p>
                       </div>
-                      {ws.role === 'owner' && (
-                        <button
-                          onClick={(e) => handleArchive(ws.id, e)}
-                          className="absolute top-3 right-3 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-all"
-                        >
-                          <Archive className="w-3 h-3 text-muted-foreground hover:text-destructive" />
-                        </button>
-                      )}
                     </div>
                   )
                 })}
