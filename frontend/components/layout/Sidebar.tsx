@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Moon, Sun, LogOut } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut, User, Settings } from 'lucide-react'
 import { useWorkspace } from '@/lib/workspace'
 import { logout } from '@/lib/auth'
 
@@ -89,32 +89,6 @@ export default function Sidebar({ expanded, onToggle, onOpenSettings }: SidebarP
           const Icon = item.icon
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
 
-          // Intercept Profile and Settings to open modal instead
-          if (item.href === '/profile' && onOpenSettings) {
-            return (
-              <button
-                key={item.href}
-                onClick={() => onOpenSettings('account')}
-                className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors text-[13px] w-full text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground`}
-              >
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                {expanded && <span className="truncate">{item.label}</span>}
-              </button>
-            )
-          }
-
-          if (item.href === '/settings' && onOpenSettings) {
-            return (
-              <button
-                key={item.href}
-                onClick={() => onOpenSettings('appearance')}
-                className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors text-[13px] w-full text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground`}
-              >
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                {expanded && <span className="truncate">{item.label}</span>}
-              </button>
-            )
-          }
 
           return (
             <Link
@@ -133,15 +107,22 @@ export default function Sidebar({ expanded, onToggle, onOpenSettings }: SidebarP
         })}
       </nav>
 
-      {/* Bottom: dark mode + logout */}
+      {/* Bottom: profile, settings, logout */}
       <div className="flex-shrink-0 border-t border-sidebar-border p-2">
-        <div className={`flex ${expanded ? 'flex-col gap-1' : 'flex-col items-center gap-1'}`}>
+        <div className={`flex ${expanded ? 'flex-col gap-0.5' : 'flex-col items-center gap-0.5'}`}>
           <button
-            onClick={toggleDarkMode}
+            onClick={() => onOpenSettings?.('account')}
             className="flex items-center gap-3 px-2 py-2 rounded-md transition-colors text-[13px] text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
-            {darkMode ? <Sun className="w-4 h-4 flex-shrink-0" /> : <Moon className="w-4 h-4 flex-shrink-0" />}
-            {expanded && <span className="truncate">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>}
+            <User className="w-4 h-4 flex-shrink-0" />
+            {expanded && <span className="truncate">Profile</span>}
+          </button>
+          <button
+            onClick={() => onOpenSettings?.('appearance')}
+            className="flex items-center gap-3 px-2 py-2 rounded-md transition-colors text-[13px] text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            <Settings className="w-4 h-4 flex-shrink-0" />
+            {expanded && <span className="truncate">Settings</span>}
           </button>
           <button
             onClick={handleLogout}

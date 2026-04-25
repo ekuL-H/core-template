@@ -6,9 +6,7 @@ import {
   BookOpen,
   BarChart2,
   Bot,
-  User,
   Activity,
-  Settings
 } from 'lucide-react'
 
 export const tradingConfig = {
@@ -23,7 +21,5 @@ export const tradingConfig = {
     { label: 'Analytics', href: '/trading/analytics', icon: BarChart2 },
     { label: 'AI Labs', href: '/trading/ai-labs', icon: Bot },
     { label: 'Automation', href: '/trading/automation', icon: Activity },
-    { label: 'Profile', href: '/profile', icon: User },
-    { label: 'Settings', href: '/settings', icon: Settings },
   ]
 }

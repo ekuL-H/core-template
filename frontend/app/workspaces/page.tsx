@@ -76,28 +76,6 @@ export default function WorkspacesPage() {
       window.removeEventListener('popstate', handleFocus)
     }
   }, [authed])
-
-  // Apply saved theme
-  useEffect(() => {
-    const saved = localStorage.getItem('theme')
-    const isDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)
-    document.documentElement.classList.toggle('dark', isDark)
-  }, [])
-
-  const [darkMode, setDarkMode] = useState(false)
-
-  useEffect(() => {
-    const saved = localStorage.getItem('theme')
-    const isDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)
-    setDarkMode(isDark)
-  }, [])
-
-  const toggleDarkMode = () => {
-    const next = !darkMode
-    setDarkMode(next)
-    document.documentElement.classList.toggle('dark', next)
-    localStorage.setItem('theme', next ? 'dark' : 'light')
-  }
   
   const fetchData = async () => {
     try {
@@ -247,7 +225,7 @@ export default function WorkspacesPage() {
 
       <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
-        <div className="w-52 border-r border-sidebar-border bg-sidebar p-4 flex flex-col flex-shrink-0">
+        <div className="w-56 border-r border-sidebar-border bg-sidebar p-4 flex flex-col flex-shrink-0">
           <nav className="flex flex-col gap-0.5 flex-1">
             {SIDEBAR_ITEMS.map(item => (
               <button
@@ -284,13 +262,6 @@ export default function WorkspacesPage() {
             >
               <SettingsIcon className="w-4 h-4" />
               <span>Settings</span>
-            </button>
-            <button
-              onClick={toggleDarkMode}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors w-full"
-            >
-              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
             </button>
             <button
               onClick={handleLogout}

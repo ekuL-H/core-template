@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
+import prisma from '../lib/prisma'
 
 export interface AuthRequest extends Request {
   userId?: string
   workspaceId?: string
 }
 
-export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -20,6 +21,18 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string }
     req.userId = decoded.userId
     req.workspaceId = req.headers['x-workspace-id'] as string | undefined
+    
+    // If workspaceId provided, verify user belongs to it
+    if (req.workspaceId) {
+      const membership = await prisma.workspaceUser.findFirst({
+        where: { userId: decoded.userId, workspaceId: req.workspaceId }
+      })
+      if (!membership) {
+        res.status(403).json({ error: 'Not a member of this workspace' })
+        return
+      }
+    }
+    
     next()
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' })
