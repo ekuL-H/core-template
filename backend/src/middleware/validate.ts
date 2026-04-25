@@ -13,6 +13,8 @@ export const sanitizeBody = (req: Request, res: Response, next: NextFunction) =>
       if (typeof req.body[key] === 'string') {
         // Trim whitespace
         req.body[key] = req.body[key].trim()
+        // Strip HTML tags to prevent XSS
+        req.body[key] = req.body[key].replace(/<[^>]*>/g, '')
 
         // Check length
         const maxLen = LONG_TEXT_FIELDS.includes(key) ? MAX_TEXT_LENGTH : MAX_STRING_LENGTH

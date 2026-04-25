@@ -18,7 +18,17 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
   const token = authHeader.split(' ')[1]
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string; tokenVersion?: number }
+    
+    // Check token version hasn't been invalidated
+    if (decoded.tokenVersion !== undefined) {
+      const user = await prisma.user.findUnique({ where: { id: decoded.userId }, select: { tokenVersion: true } })
+      if (!user || user.tokenVersion !== decoded.tokenVersion) {
+        res.status(401).json({ error: 'Token expired' })
+        return
+      }
+    }
+    
     req.userId = decoded.userId
     req.workspaceId = req.headers['x-workspace-id'] as string | undefined
     

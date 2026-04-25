@@ -15,8 +15,14 @@ app.use(cors({
 }))
 app.use(express.json())
 
-import { sanitizeBody } from './middleware/validate'
-app.use(sanitizeBody)
+import rateLimit from 'express-rate-limit'
+
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute per IP
+  message: { error: 'Too many requests, please slow down' }
+})
+app.use('/api', apiLimiter)
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Core API running' })

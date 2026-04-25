@@ -36,7 +36,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
     })
 
     const token = jwt.sign(
-      { userId: user.id },
+      { userId: user.id, tokenVersion: user.tokenVersion },
       process.env.JWT_SECRET as string,
       { expiresIn: '7d' }
     )
@@ -67,7 +67,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id },
+      { userId: user.id, tokenVersion: user.tokenVersion },
       process.env.JWT_SECRET as string,
       { expiresIn: '7d' }
     )
@@ -148,7 +148,7 @@ router.put('/me/password', async (req: Request, res: Response) => {
     if (!valid) { res.status(400).json({ error: 'Current password is incorrect' }); return }
     
     const hashed = await bcrypt.hash(newPassword, 10)
-    await prisma.user.update({ where: { id: decoded.userId }, data: { password: hashed } })
+    await prisma.user.update({ where: { id: decoded.userId }, data: { password: hashed, tokenVersion: { increment: 1 } } })
     
     res.json({ success: true })
   } catch (err) {
