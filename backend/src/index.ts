@@ -15,6 +15,9 @@ app.use(cors({
 }))
 app.use(express.json())
 
+import { sanitizeBody } from './middleware/validate'
+app.use(sanitizeBody)
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Core API running' })
 })
