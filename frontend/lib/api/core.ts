@@ -18,6 +18,11 @@ export const coreApi = {
     return res.data
   },
 
+  deleteAccount: async () => {
+    const res = await axios.delete(`${BASE_URL}/api/auth/me`, { headers: getHeaders() })
+    return res.data
+  },
+
   // Workspaces
   getWorkspaces: async () => {
     const res = await axios.get(`${BASE_URL}/api/workspace`, { headers: getHeaders() })

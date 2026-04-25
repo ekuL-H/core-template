@@ -156,4 +156,52 @@ router.put('/me/password', async (req: Request, res: Response) => {
   }
 })
 
+// Delete account and all data
+router.delete('/me', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader?.startsWith('Bearer ')) { res.status(401).json({ error: 'Unauthorised' }); return }
+
+    const token = authHeader.split(' ')[1]
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string }
+    const userId = decoded.userId
+
+    // Delete all workspace-scoped data for workspaces owned by user
+    const ownedWorkspaces = await prisma.workspaceUser.findMany({
+      where: { userId, role: 'owner' },
+      select: { workspaceId: true }
+    })
+    const ownedIds = ownedWorkspaces.map(w => w.workspaceId)
+
+    for (const wsId of ownedIds) {
+      await prisma.journalEntry.deleteMany({ where: { journal: { workspaceId: wsId } } })
+      await prisma.journal.deleteMany({ where: { workspaceId: wsId } })
+      await prisma.datasetItem.deleteMany({ where: { dataset: { workspaceId: wsId } } })
+      await prisma.dataset.deleteMany({ where: { workspaceId: wsId } })
+      await prisma.watchlistItem.deleteMany({ where: { watchlist: { workspaceId: wsId } } })
+      await prisma.watchlist.deleteMany({ where: { workspaceId: wsId } })
+      await prisma.brokerConnection.deleteMany({ where: { workspaceId: wsId } })
+      await prisma.aiModel.deleteMany({ where: { workspaceId: wsId } })
+      await prisma.workspaceUser.deleteMany({ where: { workspaceId: wsId } })
+      await prisma.workspace.delete({ where: { id: wsId } })
+    }
+
+    // Remove from workspaces user doesn't own
+    await prisma.workspaceUser.deleteMany({ where: { userId } })
+
+    // Delete user-level data
+    await prisma.activityLog.deleteMany({ where: { userId } })
+    await prisma.setting.deleteMany({ where: { userId } })
+    await prisma.profile.deleteMany({ where: { userId } })
+
+    // Delete user
+    await prisma.user.delete({ where: { id: userId } })
+
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Delete account error:', err)
+    res.status(500).json({ error: 'Failed to delete account' })
+  }
+})
+
 export default router

@@ -464,7 +464,16 @@ export default function SettingsModal({ onClose, initialSection = 'account' }: S
           message="This will permanently delete your account, all workspaces, and all data. This action cannot be undone."
           confirmLabel="Delete Everything"
           confirmDestructive={true}
-          onConfirm={() => { /* TODO: wire up delete account */ setShowDeleteConfirm(false) }}
+          onConfirm={async () => {
+            try {
+              await coreApi.deleteAccount()
+              localStorage.clear()
+              window.location.href = '/auth'
+            } catch (err) {
+              console.error('Failed to delete account', err)
+              setShowDeleteConfirm(false)
+            }
+          }}
           onCancel={() => setShowDeleteConfirm(false)}
         />
       )}

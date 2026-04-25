@@ -10,9 +10,10 @@ import { logout } from '@/lib/auth'
 interface SidebarProps {
   expanded: boolean
   onToggle: () => void
+  onOpenSettings?: (section: 'account' | 'appearance') => void
 }
 
-export default function Sidebar({ expanded, onToggle }: SidebarProps) {
+export default function Sidebar({ expanded, onToggle, onOpenSettings }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { moduleConfig } = useWorkspace()
@@ -88,6 +89,33 @@ export default function Sidebar({ expanded, onToggle }: SidebarProps) {
           const Icon = item.icon
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
 
+          // Intercept Profile and Settings to open modal instead
+          if (item.href === '/profile' && onOpenSettings) {
+            return (
+              <button
+                key={item.href}
+                onClick={() => onOpenSettings('account')}
+                className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors text-[13px] w-full text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground`}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                {expanded && <span className="truncate">{item.label}</span>}
+              </button>
+            )
+          }
+
+          if (item.href === '/settings' && onOpenSettings) {
+            return (
+              <button
+                key={item.href}
+                onClick={() => onOpenSettings('appearance')}
+                className={`flex items-center gap-3 px-2 py-2 rounded-md transition-colors text-[13px] w-full text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground`}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                {expanded && <span className="truncate">{item.label}</span>}
+              </button>
+            )
+          }
+
           return (
             <Link
               key={item.href}
@@ -99,9 +127,7 @@ export default function Sidebar({ expanded, onToggle }: SidebarProps) {
               }`}
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
-              {expanded && (
-                <span className="truncate">{item.label}</span>
-              )}
+              {expanded && <span className="truncate">{item.label}</span>}
             </Link>
           )
         })}
