@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Plus, Search, Bell, Calendar, HelpCircle, Chevro
 import { useTabs } from '@/lib/tabs'
 import { useWorkspace } from '@/lib/workspace'
 import { coreApi } from '@/lib/api/core'
+import LoadingScreen from '@/components/layout/LoadingScreen'
 
 interface HeaderProps {
   sidebarExpanded: boolean
@@ -15,18 +16,20 @@ export default function Header({ sidebarExpanded }: HeaderProps) {
   const { workspace, setWorkspace } = useWorkspace()
   const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false)
   const [workspaces, setWorkspaces] = useState<any[]>([])
+  const [switching, setSwitching] = useState(false)
 
   useEffect(() => {
     coreApi.getWorkspaces().then(setWorkspaces).catch(() => {})
   }, [])
 
   return (
+    <>
     <header className="fixed top-0 left-0 right-0 z-50 h-11 flex items-stretch bg-sidebar border-b border-sidebar-border">
       {/* Logo + Workspace */}
       <div className="flex items-stretch border-r border-sidebar-border flex-shrink-0 w-56">
         {/* Logo - click to go to workspaces */}
         <div
-          onClick={() => window.location.href = '/workspaces'}
+          onClick={() => { setSwitching(true); setTimeout(() => { window.location.href = '/workspaces' }, 100) }}
           className="w-14 flex items-center justify-center flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
         >
           <div className="w-6 h-6 rounded-md bg-foreground flex items-center justify-center">
@@ -53,19 +56,21 @@ export default function Header({ sidebarExpanded }: HeaderProps) {
                     onClick={() => {
                       setWorkspace({ id: ws.id, type: ws.type, name: ws.name })
                       setShowWorkspaceDropdown(false)
-                      // Load the target workspace's saved tabs to find the active route
-                      try {
-                        const saved = localStorage.getItem(`browser_tabs_${ws.id}`)
-                        if (saved) {
-                          const parsed = JSON.parse(saved)
-                          const activeTab = parsed.tabs?.find((t: any) => t.id === parsed.activeTabId)
-                          if (activeTab?.route) {
-                            window.location.href = activeTab.route
-                            return
+                      setSwitching(true)
+                      setTimeout(() => {
+                        try {
+                          const saved = localStorage.getItem(`browser_tabs_${ws.id}`)
+                          if (saved) {
+                            const parsed = JSON.parse(saved)
+                            const activeTab = parsed.tabs?.find((t: any) => t.id === parsed.activeTabId)
+                            if (activeTab?.route) {
+                              window.location.href = activeTab.route
+                              return
+                            }
                           }
-                        }
-                      } catch {}
-                      window.location.href = '/dashboard'
+                        } catch {}
+                        window.location.href = '/dashboard'
+                      }, 100)
                     }}
                     className={`w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors ${
                       ws.id === workspace?.id ? 'text-foreground font-medium' : 'text-muted-foreground'
@@ -161,5 +166,7 @@ export default function Header({ sidebarExpanded }: HeaderProps) {
         </button>
       </div>
     </header>
+    {switching && <LoadingScreen />}
+    </>
   )
 }

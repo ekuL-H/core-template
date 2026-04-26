@@ -168,19 +168,25 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     setTimeout(() => router.push(tab.route), 0)
   }, [tabs, router])
 
+  const MAX_TABS = 12
+
   const addTab = useCallback((route: string = '/dashboard') => {
-    const title = getTitleForRoute(route)
-    const newTab: Tab = {
-      id: generateId(),
-      title,
-      route,
-      history: [route],
-      historyIndex: 0
-    }
-    setTabs(prev => [...prev, newTab])
-    setActiveTabId(newTab.id)
-    setIsNavigatingFromTab(true)
-    setTimeout(() => router.push(route), 0)
+    setTabs(prev => {
+      if (prev.length >= MAX_TABS) return prev
+
+      const title = getTitleForRoute(route)
+      const newTab: Tab = {
+        id: generateId(),
+        title,
+        route,
+        history: [route],
+        historyIndex: 0
+      }
+      setActiveTabId(newTab.id)
+      setIsNavigatingFromTab(true)
+      setTimeout(() => router.push(route), 0)
+      return [...prev, newTab]
+    })
   }, [router])
 
   const closeTab = useCallback((id: string) => {

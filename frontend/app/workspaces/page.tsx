@@ -7,6 +7,7 @@ import { Plus, ArrowRight, Trash2, LayoutDashboard, Home, Archive, Clock, Settin
 import { logout } from '@/lib/auth'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import SettingsModal from '@/components/layout/SettingsModal'
+import LoadingScreen from '@/components/layout/LoadingScreen'
 
 
 const TYPE_ICONS: Record<string, any> = {
@@ -53,6 +54,7 @@ export default function WorkspacesPage() {
   const [renaming, setRenaming] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [showSettings, setShowSettings] = useState<'account' | 'appearance' | null>(null)
+  const [switching, setSwitching] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -106,16 +108,19 @@ export default function WorkspacesPage() {
   }
 
   const handleOpen = (ws: { id: string; type: string; name?: string }) => {
+    setSwitching(true)
     localStorage.setItem('activeWorkspace', JSON.stringify({ id: ws.id, type: ws.type, name: ws.name }))
-    try {
-      const saved = localStorage.getItem(`browser_tabs_${ws.id}`)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        const activeTab = parsed.tabs?.find((t: any) => t.id === parsed.activeTabId)
-        if (activeTab?.route) { window.location.href = activeTab.route; return }
-      }
-    } catch {}
-    window.location.href = '/dashboard'
+    setTimeout(() => {
+      try {
+        const saved = localStorage.getItem(`browser_tabs_${ws.id}`)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          const activeTab = parsed.tabs?.find((t: any) => t.id === parsed.activeTabId)
+          if (activeTab?.route) { window.location.href = activeTab.route; return }
+        }
+      } catch {}
+      window.location.href = '/dashboard'
+    }, 100)
   }
 
   const handleArchive = async (id: string, e: React.MouseEvent) => {
@@ -196,6 +201,8 @@ export default function WorkspacesPage() {
     { key: 'recent', label: 'Recent', icon: Clock },
     { key: 'archived', label: 'Archived', icon: Archive, count: archivedWorkspaces.length },
   ]
+
+  if (switching) return <LoadingScreen />
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
