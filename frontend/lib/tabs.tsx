@@ -42,6 +42,7 @@ interface TabsContextType {
   canGoBack: boolean
   canGoForward: boolean
   resetTabs: () => void
+  reorderTabs: (fromIndex: number, toIndex: number) => void
 }
 
 const TabsContext = createContext<TabsContextType | null>(null)
@@ -268,10 +269,19 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     setTimeout(() => router.push('/dashboard'), 0)
   }, [router])
 
+  const reorderTabs = useCallback((fromIndex: number, toIndex: number) => {
+    setTabs(prev => {
+      const updated = [...prev]
+      const [moved] = updated.splice(fromIndex, 1)
+      updated.splice(toIndex, 0, moved)
+      return updated
+    })
+  }, [])
+
   return (
     <TabsContext.Provider value={{
       tabs, activeTabId, setActiveTab, addTab, closeTab,
-      navigateInTab, goBack, goForward, canGoBack, canGoForward, resetTabs
+      navigateInTab, goBack, goForward, canGoBack, canGoForward, resetTabs, reorderTabs
     }}>
       {children}
     </TabsContext.Provider>
