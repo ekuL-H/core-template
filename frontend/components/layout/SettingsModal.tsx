@@ -349,6 +349,29 @@ export default function SettingsModal({ onClose, initialSection = 'account' }: S
                   {changingPassword ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                   {changingPassword ? 'Changing...' : 'Change Password'}
                 </button>
+                <div className="pt-6 mt-6 border-t border-border">
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Sessions</h3>
+                  <div className="flex items-center justify-between p-3 rounded-md border border-border">
+                    <div>
+                      <p className="text-sm text-foreground">Logout All Devices</p>
+                      <p className="text-[11px] text-muted-foreground">Sign out from all other browsers and devices</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await coreApi.logoutAllDevices()
+                          localStorage.clear()
+                          window.location.href = '/auth'
+                        } catch (err) {
+                          console.error('Failed to logout all devices', err)
+                        }
+                      }}
+                      className="px-3 py-1.5 text-xs rounded-md border border-input text-foreground hover:bg-accent transition-colors"
+                    >
+                      Logout All
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

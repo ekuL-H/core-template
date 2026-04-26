@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import prisma from '../lib/prisma'
 import rateLimit from 'express-rate-limit'
+import { logActivity } from '../lib/audit'
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -41,6 +42,8 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
       { expiresIn: '7d' }
     )
 
+    await logActivity(user.id, 'auth.register', 'Account created')
+
     res.status(201).json({ token, userId: user.id, email: user.email, name: user.name })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
@@ -71,6 +74,8 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
       process.env.JWT_SECRET as string,
       { expiresIn: '7d' }
     )
+
+    await logActivity(user.id, 'auth.login', 'User logged in')
 
     res.json({ token, userId: user.id, email: user.email, name: user.name })
   } catch (err) {
@@ -150,6 +155,8 @@ router.put('/me/password', async (req: Request, res: Response) => {
     const hashed = await bcrypt.hash(newPassword, 10)
     await prisma.user.update({ where: { id: decoded.userId }, data: { password: hashed, tokenVersion: { increment: 1 } } })
     
+    await logActivity(decoded.userId, 'auth.password_change', 'Password changed')
+
     res.json({ success: true })
   } catch (err) {
     res.status(500).json({ error: 'Failed to change password' })
@@ -171,6 +178,7 @@ router.delete('/me', async (req: Request, res: Response) => {
       where: { userId, role: 'owner' },
       select: { workspaceId: true }
     })
+    await logActivity(userId, 'auth.account_delete', 'Account deleted')
     const ownedIds = ownedWorkspaces.map(w => w.workspaceId)
 
     for (const wsId of ownedIds) {
@@ -201,6 +209,28 @@ router.delete('/me', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('Delete account error:', err)
     res.status(500).json({ error: 'Failed to delete account' })
+  }
+})
+
+// Force logout all devices (bump token version)
+router.post('/me/logout-all', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader?.startsWith('Bearer ')) { res.status(401).json({ error: 'Unauthorised' }); return }
+
+    const token = authHeader.split(' ')[1]
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string }
+
+    await prisma.user.update({
+      where: { id: decoded.userId },
+      data: { tokenVersion: { increment: 1 } }
+    })
+
+    await logActivity(decoded.userId, 'auth.logout_all', 'Logged out all devices')
+
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to logout all devices' })
   }
 })
 

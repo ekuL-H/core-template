@@ -1,6 +1,7 @@
 import { Router, Response } from 'express'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import prisma from '../lib/prisma'
+import { logActivity } from '../lib/audit'
 
 const router = Router()
 
@@ -56,6 +57,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
         }
       }
     })
+    await logActivity(req.userId!, 'workspace.create', `Created workspace: ${workspace.name}`, workspace.id)
     res.json(workspace)
   } catch (err) {
     res.status(500).json({ error: 'Failed to create workspace' })
@@ -94,6 +96,7 @@ router.post('/:id/archive', authenticate, async (req: AuthRequest, res: Response
       where: { id },
       data: { status: 'archived', archivedAt: new Date() }
     })
+    await logActivity(req.userId!, 'workspace.archive', 'Archived workspace', id)
     res.json(workspace)
   } catch (err) {
     res.status(500).json({ error: 'Failed to archive workspace' })
@@ -127,6 +130,8 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       where: { workspaceId: id, userId: req.userId!, role: 'owner' }
     })
     if (!membership) { res.status(403).json({ error: 'Only owner can delete workspace' }); return }
+
+    await logActivity(req.userId!, 'workspace.delete', 'Permanently deleted workspace', id)
 
     // Delete all workspace-scoped data
     await prisma.journalEntry.deleteMany({

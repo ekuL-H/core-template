@@ -23,6 +23,11 @@ export const coreApi = {
     return res.data
   },
 
+  logoutAllDevices: async () => {
+    const res = await axios.post(`${BASE_URL}/api/auth/me/logout-all`, {}, { headers: getHeaders() })
+    return res.data
+  },
+
   // Workspaces
   getWorkspaces: async () => {
     const res = await axios.get(`${BASE_URL}/api/workspace`, { headers: getHeaders() })
