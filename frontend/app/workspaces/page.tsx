@@ -12,12 +12,12 @@ import LoadingScreen from '@/components/layout/LoadingScreen'
 
 const TYPE_ICONS: Record<string, any> = {
   trading: LayoutDashboard,
-  housing: Home,
+  property: Home,
 }
 
 const TYPE_COLORS: Record<string, string> = {
   trading: '#6366f1',
-  housing: '#22c55e',
+  property: '#22c55e',
 }
 
 interface Workspace {

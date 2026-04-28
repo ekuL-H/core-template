@@ -29,7 +29,7 @@ export default function Breadcrumb({ overrides }: BreadcrumbProps) {
 
     const segments = pathname.split('/').filter(Boolean)
 
-    // Skip 'trading' or 'housing' segment in breadcrumb display
+    // Skip 'trading' or 'property' segment in breadcrumb display
     const displaySegments = segments.filter(s => s !== moduleConfig.module)
 
     displaySegments.forEach((segment, i) => {

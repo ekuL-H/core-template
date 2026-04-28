@@ -63,10 +63,10 @@ app.use('/api/journal', journalRoutes)
 startMT5Watcher()
 
 // ============================================================================
-// HOUSING MODULE ROUTES — (future: properties, tenants, maintenance, payments)
+// PROPERTY MODULE ROUTES — (future: properties, tenants, maintenance, payments)
 // ============================================================================
 
-// import propertyRoutes from './routes/housing/properties'
+// import propertyRoutes from './routes/property/properties'
 // app.use('/api/properties', propertyRoutes)
 
 // ============================================================================

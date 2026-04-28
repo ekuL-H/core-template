@@ -3,11 +3,11 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { tradingConfig } from '@/config/modules/trading.config'
-import { housingConfig } from '@/config/modules/housing.config'
+import { propertyConfig } from '@/config/modules/property.config'
 
 const MODULE_CONFIGS: Record<string, any> = {
   trading: tradingConfig,
-  housing: housingConfig,
+  property: propertyConfig,
 }
 
 function getModuleConfig(): any {

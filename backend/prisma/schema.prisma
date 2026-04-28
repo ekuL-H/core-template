@@ -50,7 +50,7 @@ model Profile {
 model Workspace {
   id         String    @id @default(uuid())
   name       String
-  type       String    // 'trading', 'housing', etc
+  type       String    // 'trading', 'property', etc
   status     String    @default("active") // active, archived, deleted
   archivedAt DateTime?
   createdAt  DateTime  @default(now())

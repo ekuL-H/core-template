@@ -3,11 +3,11 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { tradingConfig } from '@/config/modules/trading.config'
-import { housingConfig } from '@/config/modules/housing.config'
+import { propertyConfig } from '@/config/modules/property.config'
 
 const MODULE_CONFIGS: Record<string, any> = {
   trading: tradingConfig,
-  housing: housingConfig,
+  property: propertyConfig,
 }
 
 interface ActiveWorkspace {

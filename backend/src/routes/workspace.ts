@@ -7,7 +7,7 @@ const router = Router()
 
 const WORKSPACE_TEMPLATES = [
   { type: 'trading', name: 'Trading Platform', description: 'Watchlists, charts, journal, AI analysis' },
-  { type: 'housing', name: 'Housing Manager', description: 'Property management, tenants, maintenance' },
+  { type: 'property', name: 'Property Manager', description: 'Property management, tenants, maintenance' },
 ]
 
 // Get all workspaces for user (excludes deleted, includes archived)
