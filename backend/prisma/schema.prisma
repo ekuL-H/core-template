@@ -322,3 +322,83 @@ model WorkflowRunLog {
 
   workflowRun WorkflowRun @relation(fields: [workflowRunId], references: [id])
 }
+
+// ============================================================================
+// FUTURE — Multi-user, roles, invites (Phase 2)
+// ============================================================================
+
+// model WorkspaceRole {
+//   id          String   @id @default(uuid())
+//   workspaceId String
+//   name        String            // "Landlord", "Tenant", "Contractor", "Trader"
+//   isPreset    Boolean  @default(false)
+//   permissions Json     @default("[]")  // ["view_properties", "edit_maintenance"]
+//   sidebar     Json     @default("[]")  // sidebar config for this role
+//   createdAt   DateTime @default(now())
+//   workspace   Workspace @relation(fields: [workspaceId], references: [id])
+// }
+
+// model WorkspaceInvite {
+//   id          String    @id @default(uuid())
+//   workspaceId String
+//   email       String?          // null if link-based invite
+//   code        String    @unique // shareable code
+//   roleId      String           // which role they'll get
+//   expiresAt   DateTime?
+//   usedAt      DateTime?
+//   usedBy      String?
+//   createdBy   String
+//   createdAt   DateTime  @default(now())
+//   workspace   Workspace @relation(fields: [workspaceId], references: [id])
+// }
+
+// ============================================================================
+// FUTURE — Workflows & cross-workspace sharing (Phase 3)
+// ============================================================================
+
+// model WorkflowTemplate {
+//   id          String   @id @default(uuid())
+//   moduleType  String            // "property", "trading"
+//   name        String            // "Maintenance Job", "Tenant Onboarding"
+//   stages      Json              // array of stage definitions with features
+//   isSystem    Boolean  @default(true)
+//   createdBy   String?
+//   createdAt   DateTime @default(now())
+// }
+
+// model WorkflowInstance {
+//   id           String   @id @default(uuid())
+//   templateId   String
+//   workspaceId  String
+//   currentStage String
+//   data         Json     @default("{}")
+//   status       String   @default("active")
+//   createdAt    DateTime @default(now())
+//   updatedAt    DateTime @updatedAt
+// }
+
+// model WorkspaceLink {
+//   id                  String   @id @default(uuid())
+//   workflowInstanceId  String
+//   sourceWorkspaceId   String   // workspace that owns the data
+//   targetWorkspaceId   String   // workspace that can see/act on it
+//   targetRole          String   // what role the target has in this workflow
+//   permissions         Json     // per-stage visibility rules
+//   status              String   @default("active")
+//   createdAt           DateTime @default(now())
+// }
+
+// ============================================================================
+// FUTURE — Billing & subscriptions (Phase 4)
+// ============================================================================
+
+// model Subscription {
+//   id                   String    @id @default(uuid())
+//   userId               String
+//   plan                 String    // free, pro, business, enterprise
+//   maxWorkspaces        Int
+//   maxSeatsPerWorkspace Int
+//   status               String    // active, cancelled, past_due
+//   currentPeriodEnd     DateTime?
+//   createdAt            DateTime  @default(now())
+// }
