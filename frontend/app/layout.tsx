@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "T-AI Trading Platform",
-  description: "AI-powered trading platform",
+  title: "Oasis",
+  description: "One platform for trading, property management, and business operations",
 };
 
 export default function RootLayout({
