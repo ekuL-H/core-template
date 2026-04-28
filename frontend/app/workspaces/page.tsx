@@ -57,7 +57,7 @@ export default function WorkspacesPage() {
   const [cardMenu, setCardMenu] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
-  const [showSettings, setShowSettings] = useState<'account' | 'appearance' | null>(null)
+  const [showSettings, setShowSettings] = useState(false)
   const [switching, setSwitching] = useState(false)
 
   useEffect(() => {
@@ -378,18 +378,11 @@ export default function WorkspacesPage() {
 
           <div className="border-t border-sidebar-border pt-3 mt-3 flex flex-col gap-0.5">
             <button
-              onClick={() => setShowSettings('account')}
+              onClick={() => setShowSettings(true)}
               className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors w-full"
             >
               <User className="w-4 h-4" />
-              <span>Profile</span>
-            </button>
-            <button
-              onClick={() => setShowSettings('appearance')}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors w-full"
-            >
-              <SettingsIcon className="w-4 h-4" />
-              <span>Settings</span>
+              <span>User Settings</span>
             </button>
             <button
               onClick={handleLogout}
@@ -628,8 +621,7 @@ export default function WorkspacesPage() {
         )}
         {showSettings && (
           <SettingsModal
-            onClose={() => setShowSettings(null)}
-            initialSection={showSettings}
+            onClose={() => setShowSettings(false)}
           />
         )}
     </div>

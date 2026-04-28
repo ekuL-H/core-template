@@ -1,25 +1,27 @@
 'use client'
 
 import { useState } from 'react'
-import { X, User, Shield, Palette, AlertTriangle } from 'lucide-react'
-import AccountSection from './settings/AccountSection'
-import SecuritySection from './settings/SecuritySection'
-import AppearanceSection from './settings/AppearanceSection'
-import DangerSection from './settings/DangerSection'
+import { X, Settings, Users, Shield, Database, AlertTriangle } from 'lucide-react'
+import { useWorkspace } from '@/lib/workspace'
+import GeneralSection from './workspace-settings/GeneralSection'
+import MembersSection from './workspace-settings/MembersSection'
+import DataSection from './workspace-settings/DataSection'
+import DangerSection from './workspace-settings/DangerSection'
 
-type Section = 'account' | 'security' | 'appearance' | 'danger'
+type Section = 'general' | 'members' | 'data' | 'danger'
 
-interface SettingsModalProps {
+interface WorkspaceSettingsModalProps {
   onClose: () => void
 }
 
-export default function SettingsModal({ onClose }: SettingsModalProps) {
-  const [activeSection, setActiveSection] = useState<Section>('account')
+export default function WorkspaceSettingsModal({ onClose }: WorkspaceSettingsModalProps) {
+  const { workspace } = useWorkspace()
+  const [activeSection, setActiveSection] = useState<Section>('general')
 
   const sections: { key: Section; label: string; icon: any; danger?: boolean }[] = [
-    { key: 'account', label: 'Account', icon: User },
-    { key: 'security', label: 'Security', icon: Shield },
-    { key: 'appearance', label: 'Appearance', icon: Palette },
+    { key: 'general', label: 'General', icon: Settings },
+    { key: 'members', label: 'Members', icon: Users },
+    { key: 'data', label: 'Data', icon: Database },
     { key: 'danger', label: 'Danger Zone', icon: AlertTriangle, danger: true },
   ]
 
@@ -30,10 +32,14 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
         {/* Sidebar */}
         <div className="w-48 border-r border-border bg-sidebar p-3 flex flex-col flex-shrink-0">
           <div className="flex items-center justify-between mb-4 px-2">
-            <span className="text-xs font-semibold text-foreground">User Settings</span>
+            <span className="text-xs font-semibold text-foreground">Workspace Settings</span>
             <button onClick={onClose} className="p-1 rounded hover:bg-accent transition-colors">
               <X className="w-3.5 h-3.5 text-muted-foreground" />
             </button>
+          </div>
+
+          <div className="px-2 mb-3">
+            <p className="text-[11px] text-muted-foreground truncate">{workspace?.name}</p>
           </div>
 
           <nav className="flex flex-col gap-0.5">
@@ -56,9 +62,9 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
 
         {/* Content */}
         <div className="flex-1 p-6 overflow-y-auto">
-          {activeSection === 'account' && <AccountSection />}
-          {activeSection === 'security' && <SecuritySection />}
-          {activeSection === 'appearance' && <AppearanceSection />}
+          {activeSection === 'general' && <GeneralSection />}
+          {activeSection === 'members' && <MembersSection />}
+          {activeSection === 'data' && <DataSection />}
           {activeSection === 'danger' && <DangerSection />}
         </div>
       </div>

@@ -7,6 +7,7 @@ import { WorkspaceProvider } from '@/lib/workspace'
 import Header from '@/components/layout/Header'
 import Sidebar from '@/components/layout/Sidebar'
 import SettingsModal from '@/components/layout/SettingsModal'
+import WorkspaceSettingsModal from '@/components/layout/WorkspaceSettingsModal'
 
 export default function AuthenticatedLayout({
   children,
@@ -19,7 +20,7 @@ export default function AuthenticatedLayout({
     return saved !== null ? saved === 'true' : true
   })
 
-  const [settingsModal, setSettingsModal] = useState<'account' | 'security' | 'appearance' | 'trading-defaults' | 'data' | 'danger' | null>(null)
+  const [settingsModal, setSettingsModal] = useState<'user' | 'workspace' | null>(null)
 
   const handleToggle = () => {
     const next = !expanded
@@ -43,10 +44,14 @@ export default function AuthenticatedLayout({
             </main>
           </div>
 
-          {settingsModal && (
+          {settingsModal === 'user' && (
             <SettingsModal
               onClose={() => setSettingsModal(null)}
-              initialSection={settingsModal}
+            />
+          )}
+          {settingsModal === 'workspace' && (
+            <WorkspaceSettingsModal
+              onClose={() => setSettingsModal(null)}
             />
           )}
         </TabsProvider>

@@ -10,7 +10,7 @@ import { logout } from '@/lib/auth'
 interface SidebarProps {
   expanded: boolean
   onToggle: () => void
-  onOpenSettings?: (section: 'account' | 'appearance') => void
+  onOpenSettings?: (modal: 'user' | 'workspace') => void
 }
 
 export default function Sidebar({ expanded, onToggle, onOpenSettings }: SidebarProps) {
@@ -111,18 +111,18 @@ export default function Sidebar({ expanded, onToggle, onOpenSettings }: SidebarP
       <div className="flex-shrink-0 border-t border-sidebar-border p-2">
         <div className={`flex ${expanded ? 'flex-col gap-0.5' : 'flex-col items-center gap-0.5'}`}>
           <button
-            onClick={() => onOpenSettings?.('account')}
+            onClick={() => onOpenSettings?.('user')}
             className="flex items-center gap-3 px-2 py-2 rounded-md transition-colors text-[13px] text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
             <User className="w-4 h-4 flex-shrink-0" />
-            {expanded && <span className="truncate">Profile</span>}
+            {expanded && <span className="truncate">User Settings</span>}
           </button>
           <button
-            onClick={() => onOpenSettings?.('appearance')}
+            onClick={() => onOpenSettings?.('workspace')}
             className="flex items-center gap-3 px-2 py-2 rounded-md transition-colors text-[13px] text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
             <Settings className="w-4 h-4 flex-shrink-0" />
-            {expanded && <span className="truncate">Settings</span>}
+            {expanded && <span className="truncate">Workspace Settings</span>}
           </button>
           <button
             onClick={handleLogout}
