@@ -48,13 +48,14 @@ model Profile {
 }
 
 model Workspace {
-  id         String    @id @default(uuid())
-  name       String
-  type       String    // 'trading', 'property', etc
-  status     String    @default("active") // active, archived, deleted
-  archivedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id           String    @id @default(uuid())
+  name         String
+  type         String    // 'trading', 'property', etc
+  status       String    @default("active") // active, archived, deleted
+  archivedAt   DateTime?
+  lastOpenedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   users             WorkspaceUser[]
   watchlists        Watchlist[]
@@ -69,6 +70,7 @@ model WorkspaceUser {
   userId      String
   workspaceId String
   role        String   @default("member") // owner, admin, member, viewer
+  isFavourite Boolean  @default(false)
   createdAt   DateTime @default(now())
 
   user      User      @relation(fields: [userId], references: [id])

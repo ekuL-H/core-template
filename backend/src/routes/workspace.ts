@@ -8,6 +8,7 @@ const router = Router()
 const WORKSPACE_TEMPLATES = [
   { type: 'trading', name: 'Trading Platform', description: 'Watchlists, charts, journal, AI analysis' },
   { type: 'property', name: 'Property Manager', description: 'Property management, tenants, maintenance' },
+  { type: 'business', name: 'Business Manager', description: 'Clients, jobs, invoicing, team scheduling' },
 ]
 
 // Get all workspaces for user (excludes deleted, includes archived)
@@ -27,6 +28,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
       .map(wu => ({
         ...wu.workspace,
         role: wu.role,
+        isFavourite: wu.isFavourite,
         memberCount: wu.workspace._count.users
       }))
     res.json(workspaces)
@@ -158,6 +160,44 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   } catch (err) {
     console.error('Workspace delete error:', err)
     res.status(500).json({ error: 'Failed to delete workspace' })
+  }
+})
+
+// Toggle favourite
+router.post('/:id/favourite', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string
+    const membership = await prisma.workspaceUser.findFirst({
+      where: { workspaceId: id, userId: req.userId! }
+    })
+    if (!membership) { res.status(404).json({ error: 'Workspace not found' }); return }
+
+    const updated = await prisma.workspaceUser.update({
+      where: { id: membership.id },
+      data: { isFavourite: !membership.isFavourite }
+    })
+    res.json({ isFavourite: updated.isFavourite })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to toggle favourite' })
+  }
+})
+
+// Track workspace open
+router.post('/:id/open', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string
+    const membership = await prisma.workspaceUser.findFirst({
+      where: { workspaceId: id, userId: req.userId! }
+    })
+    if (!membership) { res.status(404).json({ error: 'Workspace not found' }); return }
+
+    await prisma.workspace.update({
+      where: { id },
+      data: { lastOpenedAt: new Date() }
+    })
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to track open' })
   }
 })
 

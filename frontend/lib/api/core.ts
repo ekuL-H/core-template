@@ -63,5 +63,14 @@ export const coreApi = {
     const res = await axios.post(`${BASE_URL}/api/workspace/${id}/restore`, {}, { headers: getHeaders() })
     return res.data
   },
-  
+
+  toggleFavourite: async (id: string) => {
+    const res = await axios.post(`${BASE_URL}/api/workspace/${id}/favourite`, {}, { headers: getHeaders() })
+    return res.data
+  },
+
+  openWorkspace: async (id: string) => {
+    const res = await axios.post(`${BASE_URL}/api/workspace/${id}/open`, {}, { headers: getHeaders() })
+    return res.data
+  },
 }

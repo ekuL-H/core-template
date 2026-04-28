@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { coreApi } from '@/lib/api/core'
-import { Plus, ArrowRight, Trash2, LayoutDashboard, Home, Archive, Clock, Settings as SettingsIcon, LogOut, RotateCcw, Search, Bell, Calendar, HelpCircle, User, Sun, Moon, MoreHorizontal, Pencil } from 'lucide-react'
+import { Plus, ArrowRight, Trash2, LayoutDashboard, Home, Briefcase, Archive, Clock, Star, Settings as SettingsIcon, LogOut, RotateCcw, Search, Bell, Calendar, HelpCircle, User, Sun, Moon, MoreHorizontal, Pencil } from 'lucide-react'
 import { logout } from '@/lib/auth'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import SettingsModal from '@/components/layout/SettingsModal'
@@ -13,11 +13,13 @@ import LoadingScreen from '@/components/layout/LoadingScreen'
 const TYPE_ICONS: Record<string, any> = {
   trading: LayoutDashboard,
   property: Home,
+  business: Briefcase,
 }
 
 const TYPE_COLORS: Record<string, string> = {
   trading: '#5C899D',
   property: '#6C7D36',
+  business: '#A0430A',
 }
 
 interface Workspace {
@@ -26,9 +28,11 @@ interface Workspace {
   type: string
   status: string
   role: string
+  isFavourite: boolean
   memberCount: number
   createdAt: string
   archivedAt: string | null
+  lastOpenedAt: string | null
 }
 
 interface Template {
@@ -109,6 +113,7 @@ export default function WorkspacesPage() {
 
   const handleOpen = (ws: { id: string; type: string; name?: string }) => {
     setSwitching(true)
+    coreApi.openWorkspace(ws.id).catch(() => {})
     localStorage.setItem('activeWorkspace', JSON.stringify({ id: ws.id, type: ws.type, name: ws.name }))
     setTimeout(() => {
       try {
@@ -173,14 +178,130 @@ export default function WorkspacesPage() {
     }
   }
 
+  const handleToggleFavourite = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (renaming) return
+    try {
+      const result = await coreApi.toggleFavourite(id)
+      setWorkspaces(prev => prev.map(ws => ws.id === id ? { ...ws, isFavourite: result.isFavourite } : ws))
+    } catch (err) {
+      console.error('Failed to toggle favourite', err)
+    }
+  }
+
   const activeWorkspaces = workspaces.filter(ws => ws.status === 'active')
   const archivedWorkspaces = workspaces.filter(ws => ws.status === 'archived')
+  const favouriteWorkspaces = activeWorkspaces.filter(ws => ws.isFavourite)
+  const recentWorkspaces = activeWorkspaces
+    .filter(ws => ws.lastOpenedAt)
+    .sort((a, b) => new Date(b.lastOpenedAt!).getTime() - new Date(a.lastOpenedAt!).getTime())
+    .slice(0, 8)
 
-  const filteredWorkspaces = filter === 'archived'
-    ? archivedWorkspaces
-    : filter === 'recent'
-      ? activeWorkspaces.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5)
-      : activeWorkspaces
+  // Group active workspaces by type
+  const TYPE_ORDER = ['trading', 'property', 'business']
+  const nonFavWorkspaces = activeWorkspaces.filter(ws => !ws.isFavourite)
+  const groupedWorkspaces = TYPE_ORDER
+    .filter(type => nonFavWorkspaces.some(ws => ws.type === type))
+    .map(type => ({
+      type,
+      label: type.charAt(0).toUpperCase() + type.slice(1),
+      color: TYPE_COLORS[type] || '#5C899D',
+      workspaces: nonFavWorkspaces.filter(ws => ws.type === type),
+    }))
+
+  const renderCard = (ws: Workspace, keyPrefix: string = '') => {
+    const Icon = TYPE_ICONS[ws.type] || LayoutDashboard
+    const color = TYPE_COLORS[ws.type] || '#5C899D'
+    return (
+      <div
+        key={keyPrefix + ws.id}
+        onClick={() => handleOpen(ws)}
+        className="group relative rounded-xl border border-border bg-card cursor-pointer hover:border-foreground/20 transition-all overflow-hidden"
+      >
+        <div className="h-1" style={{ backgroundColor: color }} />
+        <div className="p-5">
+          <div className="flex items-start justify-between mb-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: color + '15' }}>
+              <Icon className="w-5 h-5" style={{ color }} />
+            </div>
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={(e) => handleToggleFavourite(ws.id, e)}
+                className={`p-1 rounded transition-all ${
+                  ws.isFavourite
+                    ? 'text-amber-500'
+                    : 'text-muted-foreground/30 hover:text-muted-foreground'
+                }`}
+                title={ws.isFavourite ? 'Remove from favourites' : 'Add to favourites'}
+              >
+                <Star className="w-3.5 h-3.5" fill={ws.isFavourite ? 'currentColor' : 'none'} />
+              </button>
+              {ws.role === 'owner' && (
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setCardMenu(cardMenu === ws.id ? null : ws.id)
+                    }}
+                    className="p-1 rounded text-muted-foreground/30 hover:text-muted-foreground hover:bg-accent transition-all"
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+                  {cardMenu === ws.id && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setCardMenu(null) }} />
+                      <div className="absolute top-full right-0 mt-1 z-20 bg-popover border border-border rounded-md shadow-lg py-1 min-w-[140px]">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setCardMenu(null)
+                            setRenaming(ws.id)
+                            setRenameValue(ws.name)
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-accent transition-colors"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          Rename
+                        </button>
+                        <button
+                          onClick={(e) => handleArchive(ws.id, e)}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <Archive className="w-3 h-3" />
+                          Archive
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          {renaming === ws.id ? (
+            <div onClick={(e) => e.stopPropagation()}>
+              <input
+                type="text"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleRename(ws.id)
+                  if (e.key === 'Escape') { setRenaming(null); setRenameValue('') }
+                }}
+                onBlur={() => handleRename(ws.id)}
+                autoFocus
+                className="w-full px-2 py-1 text-sm font-medium rounded-md border border-input bg-transparent text-foreground focus:outline-none focus:ring-1 focus:ring-ring mb-0.5"
+              />
+            </div>
+          ) : (
+            <h3 className="text-sm font-semibold text-card-foreground mb-1">{ws.name}</h3>
+          )}
+          <p className="text-[11px] text-muted-foreground">
+            {ws.type.charAt(0).toUpperCase() + ws.type.slice(1)} · {ws.memberCount} {ws.memberCount === 1 ? 'member' : 'members'}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -294,7 +415,9 @@ export default function WorkspacesPage() {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {filter === 'archived'
                     ? 'Archived workspaces are deleted after 30 days'
-                    : `${activeWorkspaces.length} workspace${activeWorkspaces.length !== 1 ? 's' : ''}`
+                    : filter === 'recent'
+                      ? `${recentWorkspaces.length} recently opened`
+                      : `${activeWorkspaces.length} workspace${activeWorkspaces.length !== 1 ? 's' : ''}`
                   }
                 </p>
               </div>
@@ -310,7 +433,7 @@ export default function WorkspacesPage() {
             </div>
 
             {/* Empty state */}
-            {filteredWorkspaces.length === 0 && filter !== 'archived' && !showCreate && (
+            {activeWorkspaces.length === 0 && filter !== 'archived' && !showCreate && (
               <div className="text-center py-20">
                 <LayoutDashboard className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground mb-4">No workspaces yet</p>
@@ -323,99 +446,58 @@ export default function WorkspacesPage() {
               </div>
             )}
 
-            {filteredWorkspaces.length === 0 && filter === 'archived' && (
+            {archivedWorkspaces.length === 0 && filter === 'archived' && (
               <div className="text-center py-20">
                 <Archive className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">No archived workspaces</p>
               </div>
             )}
 
-            {/* Workspace cards */}
-            {filter !== 'archived' && filteredWorkspaces.length > 0 && (
-              <div className="grid grid-cols-2 gap-3">
-                {filteredWorkspaces.map(ws => {
-                  const Icon = TYPE_ICONS[ws.type] || LayoutDashboard
-                  const color = TYPE_COLORS[ws.type] || '#5C899D'
-                  return (
-                    <div
-                      key={ws.id}
-                      onClick={() => handleOpen(ws)}
-                      className="group relative rounded-lg border border-border bg-card cursor-pointer hover:border-border/80 hover:shadow-sm transition-all overflow-hidden"
-                    >
-                      <div className="h-1.5" style={{ backgroundColor: color }} />
-                      <div className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: color + '15' }}>
-                            <Icon className="w-4.5 h-4.5" style={{ color }} />
-                          </div>
-                          {ws.role === 'owner' && (
-                            <div className="relative">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setCardMenu(cardMenu === ws.id ? null : ws.id)
-                                }}
-                                className="p-1 rounded text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent transition-all"
-                              >
-                                <MoreHorizontal className="w-4 h-4" />
-                              </button>
-                              {cardMenu === ws.id && (
-                                <>
-                                  <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setCardMenu(null) }} />
-                                  <div className="absolute top-full right-0 mt-1 z-20 bg-popover border border-border rounded-md shadow-lg py-1 min-w-[140px]">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setCardMenu(null)
-                                        setRenaming(ws.id)
-                                        setRenameValue(ws.name)
-                                      }}
-                                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-accent transition-colors"
-                                    >
-                                      <Pencil className="w-3 h-3" />
-                                      Rename
-                                    </button>
-                                    <button
-                                      onClick={(e) => handleArchive(ws.id, e)}
-                                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 transition-colors"
-                                    >
-                                      <Archive className="w-3 h-3" />
-                                      Archive
-                                    </button>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        {renaming === ws.id ? (
-                          <div onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="text"
-                              value={renameValue}
-                              onChange={(e) => setRenameValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleRename(ws.id)
-                                if (e.key === 'Escape') { setRenaming(null); setRenameValue('') }
-                              }}
-                              onBlur={() => handleRename(ws.id)}
-                              autoFocus
-                              className="w-full px-2 py-1 text-sm font-medium rounded-md border border-input bg-transparent text-foreground focus:outline-none focus:ring-1 focus:ring-ring mb-0.5"
-                            />
-                          </div>
-                        ) : (
-                          <h3 className="text-sm font-medium text-card-foreground mb-0.5">{ws.name}</h3>
-                        )}
-                        <p className="text-[11px] text-muted-foreground">
-                          {ws.type.charAt(0).toUpperCase() + ws.type.slice(1)} · {ws.memberCount} {ws.memberCount === 1 ? 'member' : 'members'}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground/50 mt-2">
-                          Created {formatDate(ws.createdAt)}
-                        </p>
-                      </div>
+            {/* All workspaces — grouped by type with favourites */}
+            {filter === 'all' && activeWorkspaces.length > 0 && (
+              <div className="space-y-8">
+                {/* Favourites */}
+                {favouriteWorkspaces.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Star className="w-3.5 h-3.5 text-muted-foreground" />
+                      <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Favourites</h2>
                     </div>
-                  )
-                })}
+                    <div className="grid grid-cols-3 gap-3">
+                      {favouriteWorkspaces.map(ws => renderCard(ws))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Grouped by type */}
+                {groupedWorkspaces.map(group => (
+                  <div key={group.type}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: group.color }} />
+                      <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{group.label}</h2>
+                      <span className="text-[10px] text-muted-foreground/50">{group.workspaces.length}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      {group.workspaces.map(ws => renderCard(ws))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Recent workspaces */}
+            {filter === 'recent' && (
+              <div>
+                {recentWorkspaces.length === 0 ? (
+                  <div className="text-center py-20">
+                    <Clock className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">No recently opened workspaces</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-3">
+                    {recentWorkspaces.map(ws => renderCard(ws))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -461,53 +543,73 @@ export default function WorkspacesPage() {
               </div>
             )}
 
-            {/* Create workspace inline */}
+            {/* Create workspace modal */}
             {showCreate && (
-              <div className="mt-6 p-5 rounded-lg border border-border bg-card">
-                <h3 className="text-sm font-medium text-foreground mb-4">Create Workspace</h3>
-                <input
-                  type="text"
-                  placeholder="Workspace name"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                  autoFocus
-                  className="w-full px-3 py-2.5 text-sm rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 mb-4"
-                />
-                <p className="text-xs text-muted-foreground mb-2">Type</p>
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  {templates.map(tmpl => {
-                    const Icon = TYPE_ICONS[tmpl.type] || LayoutDashboard
-                    const color = TYPE_COLORS[tmpl.type] || '#5C899D'
-                    return (
-                      <button
-                        key={tmpl.type}
-                        onClick={() => setSelectedType(tmpl.type)}
-                        className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
-                          selectedType === tmpl.type
-                            ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                            : 'border-border hover:bg-accent'
-                        }`}
-                      >
-                        <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color + '15' }}>
-                          <Icon className="w-4 h-4" style={{ color }} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-foreground">{tmpl.name}</p>
-                          <p className="text-[10px] text-muted-foreground">{tmpl.description}</p>
-                        </div>
-                      </button>
-                    )
-                  })}
+              <>
+                <div className="fixed inset-0 z-40 bg-black/50" onClick={() => { setShowCreate(false); setNewName(''); setSelectedType('') }} />
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div className="w-full max-w-md rounded-xl border border-border bg-card shadow-lg" onClick={(e) => e.stopPropagation()}>
+                    <div className="p-6">
+                      <h3 className="text-base font-semibold text-foreground mb-1">Create Workspace</h3>
+                      <p className="text-xs text-muted-foreground mb-5">Choose a type and give your workspace a name.</p>
+
+                      <p className="text-xs font-medium text-foreground mb-2">Type</p>
+                      <div className="grid grid-cols-1 gap-2 mb-5">
+                        {templates.map(tmpl => {
+                          const Icon = TYPE_ICONS[tmpl.type] || LayoutDashboard
+                          const color = TYPE_COLORS[tmpl.type] || '#5C899D'
+                          return (
+                            <button
+                              key={tmpl.type}
+                              onClick={() => setSelectedType(tmpl.type)}
+                              className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
+                                selectedType === tmpl.type
+                                  ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                  : 'border-border hover:bg-accent'
+                              }`}
+                            >
+                              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color + '15' }}>
+                                <Icon className="w-4 h-4" style={{ color }} />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-foreground">{tmpl.name}</p>
+                                <p className="text-[11px] text-muted-foreground">{tmpl.description}</p>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      <p className="text-xs font-medium text-foreground mb-2">Name</p>
+                      <input
+                        type="text"
+                        placeholder="Workspace name"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+                        autoFocus
+                        className="w-full px-3 py-2.5 text-sm rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 mb-5"
+                      />
+
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => { setShowCreate(false); setNewName(''); setSelectedType('') }}
+                          className="px-4 py-2 text-xs rounded-md text-muted-foreground hover:bg-accent transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleCreate}
+                          disabled={!newName.trim() || !selectedType}
+                          className="px-4 py-2 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                        >
+                          Create
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-end gap-2">
-                  <button onClick={() => { setShowCreate(false); setNewName(''); setSelectedType('') }}
-                    className="px-3 py-1.5 text-xs rounded-md text-muted-foreground hover:bg-accent">Cancel</button>
-                  <button onClick={handleCreate}
-                    disabled={!newName.trim() || !selectedType}
-                    className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">Create</button>
-                </div>
-              </div>
+              </>
             )}
           </div>
         </div>
