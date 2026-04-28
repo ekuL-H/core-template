@@ -12,6 +12,12 @@ interface HeaderProps {
   sidebarExpanded: boolean
 }
 
+const TYPE_COLORS: Record<string, string> = {
+  trading: '#5C899D',
+  property: '#6C7D36',
+  business: '#A0430A',
+}
+
 export default function Header({ sidebarExpanded }: HeaderProps) {
   const { goBack, goForward, canGoBack, canGoForward } = useTabs()
   const { workspace, setWorkspace } = useWorkspace()
@@ -24,6 +30,7 @@ export default function Header({ sidebarExpanded }: HeaderProps) {
   }, [])
 
   const handleSwitchWorkspace = (ws: any) => {
+    coreApi.openWorkspace(ws.id).catch(() => {})
     setWorkspace({ id: ws.id, type: ws.type, name: ws.name })
     setShowWorkspaceDropdown(false)
     setSwitching(true)
@@ -66,11 +73,14 @@ export default function Header({ sidebarExpanded }: HeaderProps) {
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowWorkspaceDropdown(false)} />
               <div className="absolute top-full left-0 mt-1 z-20 bg-popover border border-border rounded-md shadow-lg py-1 w-full min-w-[180px]">
-                {workspaces.map((ws: any) => (
+                {workspaces.filter((ws: any) => ws.status === 'active').map((ws: any) => (
                   <button key={ws.id} onClick={() => handleSwitchWorkspace(ws)}
-                    className={`w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors ${
+                    className={`w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors flex items-center gap-2 ${
                       ws.id === workspace?.id ? 'text-foreground font-medium' : 'text-muted-foreground'
-                    }`}>{ws.name}</button>
+                    }`}>
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: TYPE_COLORS[ws.type] || '#5C899D' }} />
+                    <span className="truncate">{ws.name}</span>
+                  </button>
                 ))}
                 <div className="border-t border-border mt-1 pt-1">
                   <button
