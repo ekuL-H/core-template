@@ -59,6 +59,10 @@ export default function WorkspacesPage() {
   const [renameValue, setRenameValue] = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [switching, setSwitching] = useState(false)
+  const [modalTab, setModalTab] = useState<'create' | 'join'>('create')
+  const [joinCode, setJoinCode] = useState('')
+  const [joinError, setJoinError] = useState('')
+  const [joining, setJoining] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -175,6 +179,24 @@ export default function WorkspacesPage() {
     } finally {
       setRenaming(null)
       setRenameValue('')
+    }
+  }
+
+  const handleJoin = async () => {
+    if (!joinCode.trim()) return
+    setJoining(true)
+    setJoinError('')
+    try {
+      const result = await coreApi.joinWorkspace(joinCode.trim())
+      if (result.workspace) {
+        setShowCreate(false)
+        setJoinCode('')
+        handleOpen(result.workspace)
+      }
+    } catch (err: any) {
+      setJoinError(err.response?.data?.error || 'Failed to join workspace')
+    } finally {
+      setJoining(false)
     }
   }
 
@@ -420,7 +442,7 @@ export default function WorkspacesPage() {
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  New Workspace
+                  Workspace
                 </button>
               )}
             </div>
@@ -536,69 +558,123 @@ export default function WorkspacesPage() {
               </div>
             )}
 
-            {/* Create workspace modal */}
+            {/* Workspace modal — create or join */}
             {showCreate && (
               <>
-                <div className="fixed inset-0 z-40 bg-black/50" onClick={() => { setShowCreate(false); setNewName(''); setSelectedType('') }} />
+                <div className="fixed inset-0 z-40 bg-black/50" onClick={() => { setShowCreate(false); setNewName(''); setSelectedType(''); setJoinCode(''); setJoinError(''); setModalTab('create') }} />
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                   <div className="w-full max-w-md rounded-xl border border-border bg-card shadow-lg" onClick={(e) => e.stopPropagation()}>
                     <div className="p-6">
-                      <h3 className="text-base font-semibold text-foreground mb-1">Create Workspace</h3>
-                      <p className="text-xs text-muted-foreground mb-5">Choose a type and give your workspace a name.</p>
+                      {/* Tabs */}
+                      <div className="flex items-center gap-1 mb-5 border-b border-border">
+                        <button
+                          onClick={() => setModalTab('create')}
+                          className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+                            modalTab === 'create'
+                              ? 'border-foreground text-foreground'
+                              : 'border-transparent text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          Create New
+                        </button>
+                        <button
+                          onClick={() => setModalTab('join')}
+                          className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+                            modalTab === 'join'
+                              ? 'border-foreground text-foreground'
+                              : 'border-transparent text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          Join Workspace
+                        </button>
+                      </div>
 
-                      <p className="text-xs font-medium text-foreground mb-2">Type</p>
-                      <div className="grid grid-cols-1 gap-2 mb-5">
-                        {templates.map(tmpl => {
-                          const Icon = TYPE_ICONS[tmpl.type] || LayoutDashboard
-                          const color = TYPE_COLORS[tmpl.type] || '#5C899D'
-                          return (
+                      {modalTab === 'create' ? (
+                        <>
+                          <p className="text-xs font-medium text-foreground mb-2">Type</p>
+                          <div className="grid grid-cols-1 gap-2 mb-5">
+                            {templates.map(tmpl => {
+                              const Icon = TYPE_ICONS[tmpl.type] || LayoutDashboard
+                              const color = TYPE_COLORS[tmpl.type] || '#5C899D'
+                              return (
+                                <button
+                                  key={tmpl.type}
+                                  onClick={() => setSelectedType(tmpl.type)}
+                                  className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
+                                    selectedType === tmpl.type
+                                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                      : 'border-border hover:bg-accent'
+                                  }`}
+                                >
+                                  <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color + '15' }}>
+                                    <Icon className="w-4 h-4" style={{ color }} />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-foreground">{tmpl.name}</p>
+                                    <p className="text-[11px] text-muted-foreground">{tmpl.description}</p>
+                                  </div>
+                                </button>
+                              )
+                            })}
+                          </div>
+
+                          <p className="text-xs font-medium text-foreground mb-2">Name</p>
+                          <input
+                            type="text"
+                            placeholder="Workspace name"
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+                            autoFocus
+                            className="w-full px-3 py-2.5 text-sm rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 mb-5"
+                          />
+
+                          <div className="flex justify-end gap-2">
                             <button
-                              key={tmpl.type}
-                              onClick={() => setSelectedType(tmpl.type)}
-                              className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
-                                selectedType === tmpl.type
-                                  ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                                  : 'border-border hover:bg-accent'
-                              }`}
+                              onClick={() => { setShowCreate(false); setNewName(''); setSelectedType('') }}
+                              className="px-4 py-2 text-xs rounded-md text-muted-foreground hover:bg-accent transition-colors"
                             >
-                              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: color + '15' }}>
-                                <Icon className="w-4 h-4" style={{ color }} />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-foreground">{tmpl.name}</p>
-                                <p className="text-[11px] text-muted-foreground">{tmpl.description}</p>
-                              </div>
+                              Cancel
                             </button>
-                          )
-                        })}
-                      </div>
-
-                      <p className="text-xs font-medium text-foreground mb-2">Name</p>
-                      <input
-                        type="text"
-                        placeholder="Workspace name"
-                        value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                        autoFocus
-                        className="w-full px-3 py-2.5 text-sm rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 mb-5"
-                      />
-
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => { setShowCreate(false); setNewName(''); setSelectedType('') }}
-                          className="px-4 py-2 text-xs rounded-md text-muted-foreground hover:bg-accent transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleCreate}
-                          disabled={!newName.trim() || !selectedType}
-                          className="px-4 py-2 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
-                        >
-                          Create
-                        </button>
-                      </div>
+                            <button
+                              onClick={handleCreate}
+                              disabled={!newName.trim() || !selectedType}
+                              className="px-4 py-2 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                            >
+                              Create
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs text-muted-foreground mb-4">Enter the invite code you received to join a workspace.</p>
+                          <input
+                            type="text"
+                            placeholder="Paste invite code"
+                            value={joinCode}
+                            onChange={(e) => { setJoinCode(e.target.value); setJoinError('') }}
+                            onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
+                            autoFocus
+                            className="w-full px-3 py-2.5 text-sm rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 font-mono mb-3"
+                          />
+                          {joinError && <p className="text-xs text-destructive mb-3">{joinError}</p>}
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => { setShowCreate(false); setJoinCode(''); setJoinError('') }}
+                              className="px-4 py-2 text-xs rounded-md text-muted-foreground hover:bg-accent transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handleJoin}
+                              disabled={joining || !joinCode.trim()}
+                              className="px-4 py-2 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                            >
+                              {joining ? 'Joining...' : 'Join'}
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

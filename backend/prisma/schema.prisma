@@ -63,6 +63,7 @@ model Workspace {
   datasets          Dataset[]
   brokerConnections BrokerConnection[]
   aiModels          AiModel[]
+  invites           WorkspaceInvite[]
 }
 
 model WorkspaceUser {
@@ -340,19 +341,18 @@ model WorkflowRunLog {
 //   workspace   Workspace @relation(fields: [workspaceId], references: [id])
 // }
 
-// model WorkspaceInvite {
-//   id          String    @id @default(uuid())
-//   workspaceId String
-//   email       String?          // null if link-based invite
-//   code        String    @unique // shareable code
-//   roleId      String           // which role they'll get
-//   expiresAt   DateTime?
-//   usedAt      DateTime?
-//   usedBy      String?
-//   createdBy   String
-//   createdAt   DateTime  @default(now())
-//   workspace   Workspace @relation(fields: [workspaceId], references: [id])
-// }
+model WorkspaceInvite {
+  id          String    @id @default(uuid())
+  workspaceId String
+  code        String    @unique
+  role        String    @default("member") // admin, member, viewer
+  maxUses     Int       @default(1)
+  uses        Int       @default(0)
+  expiresAt   DateTime?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+}
 
 // ============================================================================
 // FUTURE — Workflows & cross-workspace sharing (Phase 3)

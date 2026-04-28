@@ -73,4 +73,39 @@ export const coreApi = {
     const res = await axios.post(`${BASE_URL}/api/workspace/${id}/open`, {}, { headers: getHeaders() })
     return res.data
   },
+
+  getMembers: async (id: string) => {
+    const res = await axios.get(`${BASE_URL}/api/workspace/${id}/members`, { headers: getHeaders() })
+    return res.data
+  },
+
+  updateMemberRole: async (workspaceId: string, memberId: string, role: string) => {
+    const res = await axios.put(`${BASE_URL}/api/workspace/${workspaceId}/members/${memberId}`, { role }, { headers: getHeaders() })
+    return res.data
+  },
+
+  removeMember: async (workspaceId: string, memberId: string) => {
+    const res = await axios.delete(`${BASE_URL}/api/workspace/${workspaceId}/members/${memberId}`, { headers: getHeaders() })
+    return res.data
+  },
+
+  createInvite: async (workspaceId: string, data: { role?: string; maxUses?: number; expiresInDays?: number }) => {
+    const res = await axios.post(`${BASE_URL}/api/workspace/${workspaceId}/invites`, data, { headers: getHeaders() })
+    return res.data
+  },
+
+  getInvites: async (workspaceId: string) => {
+    const res = await axios.get(`${BASE_URL}/api/workspace/${workspaceId}/invites`, { headers: getHeaders() })
+    return res.data
+  },
+
+  deleteInvite: async (workspaceId: string, inviteId: string) => {
+    const res = await axios.delete(`${BASE_URL}/api/workspace/${workspaceId}/invites/${inviteId}`, { headers: getHeaders() })
+    return res.data
+  },
+
+  joinWorkspace: async (code: string) => {
+    const res = await axios.post(`${BASE_URL}/api/workspace/join`, { code }, { headers: getHeaders() })
+    return res.data
+  },
 }

@@ -201,4 +201,188 @@ router.post('/:id/open', authenticate, async (req: AuthRequest, res: Response) =
   }
 })
 
+// Get workspace members
+router.get('/:id/members', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string
+    const membership = await prisma.workspaceUser.findFirst({
+      where: { workspaceId: id, userId: req.userId! }
+    })
+    if (!membership) { res.status(404).json({ error: 'Workspace not found' }); return }
+
+    const members = await prisma.workspaceUser.findMany({
+      where: { workspaceId: id },
+      include: { user: { select: { id: true, name: true, email: true, createdAt: true } } },
+      orderBy: { createdAt: 'asc' }
+    })
+    res.json(members.map(m => ({
+      id: m.id,
+      userId: m.userId,
+      role: m.role,
+      name: m.user.name,
+      email: m.user.email,
+      joinedAt: m.createdAt,
+    })))
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch members' })
+  }
+})
+
+// Update member role
+router.put('/:id/members/:memberId', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, memberId } = req.params as { id: string; memberId: string }
+    const { role } = req.body
+    if (!role || !['admin', 'member', 'viewer'].includes(role)) {
+      res.status(400).json({ error: 'Invalid role' }); return
+    }
+
+    const membership = await prisma.workspaceUser.findFirst({
+      where: { workspaceId: id, userId: req.userId!, role: { in: ['owner', 'admin'] } }
+    })
+    if (!membership) { res.status(403).json({ error: 'Not authorized' }); return }
+
+    const target = await prisma.workspaceUser.findFirst({
+      where: { id: memberId, workspaceId: id }
+    })
+    if (!target) { res.status(404).json({ error: 'Member not found' }); return }
+    if (target.role === 'owner') { res.status(403).json({ error: 'Cannot change owner role' }); return }
+
+    const updated = await prisma.workspaceUser.update({
+      where: { id: memberId },
+      data: { role }
+    })
+    res.json({ id: updated.id, role: updated.role })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update role' })
+  }
+})
+
+// Remove member
+router.delete('/:id/members/:memberId', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, memberId } = req.params as { id: string; memberId: string }
+
+    const membership = await prisma.workspaceUser.findFirst({
+      where: { workspaceId: id, userId: req.userId!, role: { in: ['owner', 'admin'] } }
+    })
+    if (!membership) { res.status(403).json({ error: 'Not authorized' }); return }
+
+    const target = await prisma.workspaceUser.findFirst({
+      where: { id: memberId, workspaceId: id }
+    })
+    if (!target) { res.status(404).json({ error: 'Member not found' }); return }
+    if (target.role === 'owner') { res.status(403).json({ error: 'Cannot remove owner' }); return }
+
+    await prisma.workspaceUser.delete({ where: { id: memberId } })
+    await logActivity(req.userId!, 'workspace.member.remove', `Removed member from workspace`, id)
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to remove member' })
+  }
+})
+
+// Create invite
+router.post('/:id/invites', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string
+    const { role = 'member', maxUses = 1, expiresInDays = 7 } = req.body
+
+    if (!['admin', 'member', 'viewer'].includes(role)) {
+      res.status(400).json({ error: 'Invalid role' }); return
+    }
+
+    const membership = await prisma.workspaceUser.findFirst({
+      where: { workspaceId: id, userId: req.userId!, role: { in: ['owner', 'admin'] } }
+    })
+    if (!membership) { res.status(403).json({ error: 'Not authorized' }); return }
+
+    const { randomBytes } = await import('crypto')
+    const code = randomBytes(16).toString('hex')
+
+    const invite = await prisma.workspaceInvite.create({
+      data: {
+        workspaceId: id,
+        code,
+        role,
+        maxUses,
+        expiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
+        createdBy: req.userId!,
+      }
+    })
+    await logActivity(req.userId!, 'workspace.invite.create', `Created invite (${role})`, id)
+    res.json(invite)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create invite' })
+  }
+})
+
+// List invites
+router.get('/:id/invites', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string
+    const membership = await prisma.workspaceUser.findFirst({
+      where: { workspaceId: id, userId: req.userId!, role: { in: ['owner', 'admin'] } }
+    })
+    if (!membership) { res.status(403).json({ error: 'Not authorized' }); return }
+
+    const invites = await prisma.workspaceInvite.findMany({
+      where: { workspaceId: id },
+      orderBy: { createdAt: 'desc' }
+    })
+    res.json(invites)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch invites' })
+  }
+})
+
+// Delete invite
+router.delete('/:id/invites/:inviteId', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, inviteId } = req.params as { id: string; inviteId: string }
+
+    const membership = await prisma.workspaceUser.findFirst({
+      where: { workspaceId: id, userId: req.userId!, role: { in: ['owner', 'admin'] } }
+    })
+    if (!membership) { res.status(403).json({ error: 'Not authorized' }); return }
+
+    await prisma.workspaceInvite.delete({ where: { id: inviteId } })
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete invite' })
+  }
+})
+
+// Join workspace via invite code
+router.post('/join', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { code } = req.body
+    if (!code) { res.status(400).json({ error: 'Invite code is required' }); return }
+
+    const invite = await prisma.workspaceInvite.findUnique({ where: { code } })
+    if (!invite) { res.status(404).json({ error: 'Invalid invite code' }); return }
+    if (invite.expiresAt && invite.expiresAt < new Date()) { res.status(410).json({ error: 'Invite has expired' }); return }
+    if (invite.maxUses > 0 && invite.uses >= invite.maxUses) { res.status(410).json({ error: 'Invite has reached max uses' }); return }
+
+    const existing = await prisma.workspaceUser.findFirst({
+      where: { workspaceId: invite.workspaceId, userId: req.userId! }
+    })
+    if (existing) { res.status(409).json({ error: 'Already a member of this workspace' }); return }
+
+    await prisma.workspaceUser.create({
+      data: { workspaceId: invite.workspaceId, userId: req.userId!, role: invite.role }
+    })
+    await prisma.workspaceInvite.update({
+      where: { id: invite.id },
+      data: { uses: { increment: 1 } }
+    })
+
+    const workspace = await prisma.workspace.findUnique({ where: { id: invite.workspaceId } })
+    await logActivity(req.userId!, 'workspace.join', `Joined workspace via invite`, invite.workspaceId)
+    res.json({ workspace })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to join workspace' })
+  }
+})
+
 export default router
