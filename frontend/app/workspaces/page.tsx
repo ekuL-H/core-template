@@ -16,8 +16,8 @@ const TYPE_ICONS: Record<string, any> = {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  trading: '#6366f1',
-  property: '#22c55e',
+  trading: '#5C899D',
+  property: '#6C7D36',
 }
 
 interface Workspace {
@@ -335,7 +335,7 @@ export default function WorkspacesPage() {
               <div className="grid grid-cols-2 gap-3">
                 {filteredWorkspaces.map(ws => {
                   const Icon = TYPE_ICONS[ws.type] || LayoutDashboard
-                  const color = TYPE_COLORS[ws.type] || '#6366f1'
+                  const color = TYPE_COLORS[ws.type] || '#5C899D'
                   return (
                     <div
                       key={ws.id}
@@ -424,7 +424,7 @@ export default function WorkspacesPage() {
               <div className="space-y-2">
                 {archivedWorkspaces.map(ws => {
                   const Icon = TYPE_ICONS[ws.type] || LayoutDashboard
-                  const color = TYPE_COLORS[ws.type] || '#6366f1'
+                  const color = TYPE_COLORS[ws.type] || '#5C899D'
                   const archivedDate = ws.archivedAt ? new Date(ws.archivedAt) : new Date()
                   const deleteDate = new Date(archivedDate.getTime() + 30 * 24 * 60 * 60 * 1000)
                   const daysLeft = Math.max(0, Math.ceil((deleteDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
@@ -478,7 +478,7 @@ export default function WorkspacesPage() {
                 <div className="grid grid-cols-2 gap-2 mb-4">
                   {templates.map(tmpl => {
                     const Icon = TYPE_ICONS[tmpl.type] || LayoutDashboard
-                    const color = TYPE_COLORS[tmpl.type] || '#6366f1'
+                    const color = TYPE_COLORS[tmpl.type] || '#5C899D'
                     return (
                       <button
                         key={tmpl.type}

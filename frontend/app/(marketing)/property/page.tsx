@@ -70,10 +70,10 @@ export default function PropertyPage() {
       {/* Hero */}
       <div className="px-6 md:px-12 pt-24 pb-16 max-w-4xl mx-auto">
         <div className="flex items-center gap-2 mb-6">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#22c55e15' }}>
-            <Home className="w-4 h-4" style={{ color: '#22c55e' }} />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#6C7D3615' }}>
+            <Home className="w-4 h-4" style={{ color: '#6C7D36' }} />
           </div>
-          <span className="text-xs font-medium" style={{ color: '#22c55e' }}>Oasis Property</span>
+          <span className="text-xs font-medium" style={{ color: '#6C7D36' }}>Oasis Property</span>
           <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-warning/15 text-warning">Coming Soon</span>
         </div>
         <h1 className="text-3xl md:text-4xl font-bold text-foreground leading-tight mb-4">

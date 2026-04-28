@@ -41,10 +41,10 @@ export default function BusinessPage() {
       {/* Hero */}
       <div className="px-6 md:px-12 pt-24 pb-16 max-w-4xl mx-auto">
         <div className="flex items-center gap-2 mb-6">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#f59e0b15' }}>
-            <Briefcase className="w-4 h-4" style={{ color: '#f59e0b' }} />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#A0430A15' }}>
+            <Briefcase className="w-4 h-4" style={{ color: '#A0430A' }} />
           </div>
-          <span className="text-xs font-medium" style={{ color: '#f59e0b' }}>Oasis Business</span>
+          <span className="text-xs font-medium" style={{ color: '#A0430A' }}>Oasis Business</span>
           <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent text-muted-foreground">Planned</span>
         </div>
         <h1 className="text-3xl md:text-4xl font-bold text-foreground leading-tight mb-4">

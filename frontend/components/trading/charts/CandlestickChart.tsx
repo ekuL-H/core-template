@@ -38,7 +38,7 @@ const ALL_TIMEFRAMES = [
 
 const DEFAULT_FAVOURITES = ['30min', '4h', '1day']
 
-export default function CandlestickChart({ symbol, color = '#6366f1' }: CandlestickChartProps) {
+export default function CandlestickChart({ symbol, color = '#5C899D' }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)

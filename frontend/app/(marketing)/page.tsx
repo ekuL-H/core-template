@@ -23,7 +23,7 @@ export default function LandingPage() {
   const products = [
     {
       icon: LineChart,
-      color: '#6366f1',
+      color: '#5C899D',
       title: 'Oasis Trading',
       tag: 'Live',
       description: 'Charts, watchlists, trade journal, and AI analysis — with live MT5 integration and real-time market data.',
@@ -32,7 +32,7 @@ export default function LandingPage() {
     },
     {
       icon: Home,
-      color: '#22c55e',
+      color: '#6C7D36',
       title: 'Oasis Property',
       tag: 'Coming Soon',
       description: 'Manage properties, tenants, maintenance, payments, and documents — everything a landlord needs in one place.',
@@ -41,7 +41,7 @@ export default function LandingPage() {
     },
     {
       icon: Briefcase,
-      color: '#f59e0b',
+      color: '#A0430A',
       title: 'Oasis Business',
       tag: 'Planned',
       description: 'Run any service-based business. Manage clients, jobs, invoicing, and team — built for contractors, freelancers, and agencies.',
